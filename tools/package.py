@@ -128,6 +128,12 @@ def main():
     overlay(control,'control',('\n'.join(out).rstrip()+'\n').encode())
     from description import apply_description
     apply_description(control,data)
+    # The depiction is part of the payload: record its final size, not the
+    # size before apply_description rewrites the localized JSON.
+    final_size=sum(len(content) for _,content in data.values() if content is not None)//1024
+    final_control=control['control'][1].decode()
+    final_control='\n'.join('Installed-Size: '+str(final_size) if line.startswith('Installed-Size:') else line for line in final_control.splitlines())+'\n'
+    overlay(control,'control',final_control.encode())
     members=Path('dist/members');members.mkdir(parents=True,exist_ok=True)
     (members/'debian-binary').write_bytes(b'2.0\n');(members/'control.tar.gz').write_bytes(serialize(control));(members/'data.tar.xz').write_bytes(compress_data(serialize(compression_order(data),False)))
     pack(str(OUT),str(members));assert OUT.stat().st_size<3793436,'Package must be smaller than issued compact beta6';print(OUT,OUT.stat().st_size,hashlib.sha256(OUT.read_bytes()).hexdigest())

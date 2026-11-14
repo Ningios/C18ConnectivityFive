@@ -57,7 +57,7 @@
     "tools/integrity.py": "2d57ff789eac0d4307be9b0a20355e3d538294941c2aacabbf6489234c2e16e1",
     "tools/linker/ControlCenterUIKit.framework/ControlCenterUIKit.tbd": "92a4f2cdefc6fcb0f9a96dc8089ff673d6189d868d96d4db554302dd525b7158",
     "tools/mkdeb.py": "6c01c5f34a12abb5aa095242515ca0a8e44d7d707f2ca829948debbba662089a",
-    "tools/package.py": "49483d273644ab91d7724e941df0da13eca14cc5e85364ec6b383b2059b2f7e4",
+    "tools/package.py": "ed8b4146063b45dc37fe2c829c60c8346739cce4570aa3c3011c7bd9f156e435",
     "tools/power_cleanup.py": "d079b32c7d93790ebff609e0a2e441a75fd2e4cc76ec674baf6ab44dcfe36497",
     "tools/promo-patches.json": "7069c9d0366247dc747a08b0feb03b88ad3b2fa25bb8b208a968c816945d312d",
     "tools/promo_cleanup.py": "6401d8188158c525e3de2d3ff82f2958969f4b2ca1e9f35346e9b9e9846b2522",
