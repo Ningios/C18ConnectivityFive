@@ -3,6 +3,7 @@
 #import "C18PressDriver.h"
 #import "C18Localization.h"
 #import "C18HookRuntime.h"
+#import "C18ConnectivityShape.h"
 #import <QuartzCore/QuartzCore.h>
 #import <mach-o/dyld.h>
 #import <string.h>
@@ -21,8 +22,6 @@ static BOOL gC18Presenting, gC18Presented, gC18DidPresentInFlight;
 static NSUInteger gC18PreparingDepth;
 static BOOL gShellBatchInstalled, gShellReloadInstalled, gShellFactoryInstalled, gModuleContentInstalled;
 static __thread NSUInteger gC18FactoryDepth;
-static __thread BOOL gC18StandaloneBuildAllowed;
-@class C18FiveStandaloneView;
 static NSUInteger gC18PresentationGeneration;
 BOOL C18FiveIsPresented(void) { return NSThread.isMainThread && (gC18Presenting || gC18Presented) && gC18LiveShell!=nil; }
 BOOL C18FiveIsPreparing(void) { return C18FiveIsPresented() && gC18PreparingDepth>0; }
@@ -52,7 +51,7 @@ static void C18PrepareShell(id shell);
 static BOOL C18ShellSessionMatches(id shell,NSUInteger generation);
 static void C18InvalidateShell(id shell,NSUInteger generation);
 static UIView *C18DisplayView(UIView *view);
-static UIView *C18SyncStandaloneContent(UIView *module,UIView *content);
+static UIView *C18SyncNativeContent(UIView *module,UIView *content);
 static id (*oShellFactory)(id,SEL,id,long long,id,BOOL);
 static void (*oModuleContent)(id,SEL,id);
 static void (*oConnectivityList)(id,SEL,long long,int);
@@ -62,7 +61,6 @@ static BOOL gConnectivityListInstalled;
 @property(nonatomic,strong) NSMutableDictionary<NSString *,C18FiveModuleHost *> *hosts;
 @property(nonatomic,strong) NSMutableDictionary<NSNumber *,UIControl *> *buttons;
 @property(nonatomic,strong) UIView *compactBar;
-@property(nonatomic,weak) C18FiveStandaloneView *standaloneSurface;
 @property(nonatomic,strong) UIControl *auxiliary;
 @property(nonatomic,weak) UIView *owner;
 @property(nonatomic,weak) UIView *registeredModule;
@@ -139,20 +137,7 @@ static C18FiveState *State(UIView *view, BOOL create) {
     if (!state && create) { state=[C18FiveState new]; state.owner=view; state.registeredModule=C18OuterModule(view); objc_setAssociatedObject(view,&kC18State,state,OBJC_ASSOCIATION_RETAIN_NONATOMIC); }
     return state;
 }
-// The original connection view is retained only as a state/action backend.
-// It is NOT a subview, contentView, snapshot source or animation participant
-// when mode 5 is selected. The outer native module still owns drag/position.
-@interface C18FiveStandaloneView : UIView
-@property(nonatomic,strong) UIView *backend;
-- (void)refresh;
-- (void)ensureAppeared;
-- (BOOL)canExpand;
-- (BOOL)shouldExpandOnTouchAtPoint:(CGPoint)point;
-@end
-static UIView *C18DisplayView(UIView *view) {
-    C18FiveState *state=State(view,NO);
-    return state.standaloneSurface ?: view;
-}
+static UIView *C18DisplayView(UIView *view) { return view; }
 UIView *C18FiveDisplayView(UIView *view) { return C18DisplayView(view); }
 static BOOL Parts(id view, NSArray **buttons, NSArray **tiles, UIView **cluster) {
     id b=C18FiveGet(view,@"_buttons"), t=C18FiveGet(view,@"_tiles"), c=C18FiveGet(view,@"_cluster");
@@ -165,11 +150,7 @@ static BOOL C18Managed(UIView *view) {
     return module && [live isKindOfClass:NSArray.class] && [live containsObject:module] && Parts(view,NULL,NULL,NULL);
 }
 static CGSize C18CompactSize(UIView *view) {
-    UIView *module=C18OuterModule(view); C18Position positions[7];
-    C18FiveStandaloneView *surface=State(view,NO).standaloneSurface;
-    if (surface) return surface.bounds.size;
-    CGSize size=module.bounds.size;
-    if (C18CalculatePositions((int)gMode,size.width,size.height,positions)>0) return size;
+    // Match the native content coordinate space; scaleContainer owns scaling.
     return view.bounds.size;
 }
 static BOOL Eligible(UIView *view) {
@@ -179,7 +160,7 @@ static BOOL Eligible(UIView *view) {
         C18CalculatePositions((int)gMode,size.width,size.height,p)>0;
 }
 static void Restore(UIView *view, BOOL removeHosts) {
-    UIView *cluster=C18FiveGet(view,@"_cluster"); if (!State(view,NO).standaloneSurface && [cluster isKindOfClass:UIView.class]) cluster.hidden=NO;
+    UIView *cluster=C18FiveGet(view,@"_cluster"); if ([cluster isKindOfClass:UIView.class]) cluster.hidden=NO;
     C18FiveState *state=State(view,NO); if (!state) return;
     state.listRequestToken++;
     state.applied=NO; state.compactBar.hidden=YES;
@@ -218,7 +199,6 @@ static void ApplyVisible(UIView *view) {
     BOOL managed=gMode && C18Managed(view);
     if (!managed) { Restore(view,gMode==0); return; }
     UIView *cluster=C18FiveGet(view,@"_cluster");
-    BOOL standalone=existing.standaloneSurface!=nil;
     UIView *display=C18DisplayView(view);
     // Original compact buttons are never repositioned or restored into a live
     // animation. They continue to own the native expanded-card lifecycle.
@@ -228,14 +208,14 @@ static void ApplyVisible(UIView *view) {
             if (gMode!=5) { Restore(view,NO);return; }
             // Zero/temporary native bounds may settle later in this same
             // transaction. Never expose the old compact cluster in between.
-            if (!standalone) cluster.hidden=YES; existing.applied=NO; existing.compactBar.hidden=YES; return;
+            cluster.hidden=YES; existing.applied=NO; existing.compactBar.hidden=YES; return;
         }
-        if (!standalone) cluster.hidden=existing.compactBar!=nil;
+        cluster.hidden=existing.compactBar!=nil;
         existing.applied=NO;
         for (UIControl *button in existing.buttons.allValues) C18PressUpdate(button,NO);
-        existing.compactBar.alpha=standalone?1:cluster.alpha; existing.compactBar.userInteractionEnabled=NO; return;
+        existing.compactBar.alpha=cluster.alpha; existing.compactBar.userInteractionEnabled=NO; return;
     }
-    if (!standalone) cluster.hidden=YES;
+    cluster.hidden=YES;
     NSArray *buttons; if (!Parts(view,&buttons,NULL,NULL)) return;
     C18FiveState *state=State(view,YES);
     if (!state.compactBar) {
@@ -245,19 +225,21 @@ static void ApplyVisible(UIView *view) {
         [state.auxiliary addTarget:state action:@selector(expand:) forControlEvents:UIControlEventTouchUpInside]; [state.compactBar addSubview:state.auxiliary];
     }
     if (state.compactBar.superview!=display) [display addSubview:state.compactBar];
-    state.applied=YES; state.compactBar.hidden=NO; state.compactBar.alpha=standalone?1:cluster.alpha;
+    state.applied=YES; state.compactBar.hidden=NO; state.compactBar.alpha=cluster.alpha;
     state.compactBar.userInteractionEnabled=!C18Editing();
     // Bounds are computed once for the compact representation; native expanded
     // geometry cannot overwrite these button frames during collapse.
     CGSize compactSize=C18CompactSize(view);
     state.compactBar.frame=(CGRect){CGPointZero,compactSize};
     C18Position p[7]; int count=C18CalculatePositions((int)gMode,compactSize.width,compactSize.height,p);
-    NSMutableArray<NSString *> *items=[[gSlots subarrayWithRange:NSMakeRange(0,gMode)] mutableCopy];
+    NSInteger visibleSlots=(gMode==5 && count==4)?4:gMode;
+    NSMutableArray<NSString *> *items=[[gSlots subarrayWithRange:NSMakeRange(0,visibleSlots)] mutableCopy];
     if (gMode==4) for (NSInteger i=0;i<7 && items.count<7;i++) { NSString *s=C18FiveBuiltinID(i); if (![items containsObject:s]) [items addObject:s]; }
     NSSet *wanted=[NSSet setWithArray:items];
     for (NSString *key in state.hosts.allKeys) if (![wanted containsObject:key]) { [state.hosts[key] close]; [state.hosts removeObjectForKey:key]; }
     NSMutableSet *usedBuiltins=[NSMutableSet set];
     for (NSString *slot in items) { NSInteger index=C18FiveBuiltinIndex(slot);if (index!=NSNotFound) [usedBuiltins addObject:@(index)]; }
+    for (NSString *slot in state.hosts) state.hosts[slot].hidden=![wanted containsObject:slot];
     for (NSNumber *index in state.buttons) if (![usedBuiltins containsObject:index]) {
         UIControl *unused=state.buttons[index];if (!unused.hidden) unused.hidden=YES;C18PressUpdate(unused,NO);
     }
@@ -282,7 +264,12 @@ static void ApplyVisible(UIView *view) {
             C18SyncButton(button,buttons[item],p[i].primary); v=button;
         } else {
             C18FiveModuleHost *host=state.hosts[slot];
-            if (!host) { host=[[C18FiveModuleHost alloc] initWithSlotID:slot owner:view]; state.hosts[slot]=host; [state.compactBar addSubview:host]; }
+            if (!host) {
+                host=[[C18FiveModuleHost alloc] initWithSlotID:slot owner:view];
+                if (!host) continue;
+                state.hosts[slot]=host;
+                [state.compactBar addSubview:host];
+            }
             v=host;
         }
         if (p[i].primary) {
@@ -307,88 +294,35 @@ static void ApplyVisible(UIView *view) {
     state.auxiliary.hidden=gMode!=4 || CGRectIsNull(auxiliary);
     if (!state.auxiliary.hidden) { state.auxiliary.frame=CGRectInset(auxiliary,-2,-2); [state.compactBar bringSubviewToFront:state.auxiliary]; }
 }
-@implementation C18FiveStandaloneView
-- (void)layoutSubviews {
-    [super layoutSubviews];
-    // Only this independent surface supplies compact geometry.
-    if (!gC18FactoryDepth) Apply(self.backend);
-}
-- (void)didMoveToWindow {
-    [super didMoveToWindow];
-    if (self.window && !gC18FactoryDepth) Apply(self.backend);
-}
-- (void)refresh { C18FiveVoid(self.backend,NSSelectorFromString(@"refresh"));Apply(self.backend); }
-- (void)ensureAppeared { C18FiveVoid(self.backend,NSSelectorFromString(@"ensureAppeared"));Apply(self.backend); }
-- (void)controlCenterWillPresent { C18FiveVoid(self.backend,_cmd);Apply(self.backend); }
-- (void)controlCenterDidPresent { C18FiveVoid(self.backend,_cmd);Apply(self.backend); }
-- (void)controlCenterDidDismiss { C18FiveVoid(self.backend,_cmd); }
-- (void)setGridSize:(long long)size {
-    SEL sel=_cmd;
-    if (C18HookCanInstall(object_getClass(self.backend),sel,"v",@[@"q"]))
-        ((void(*)(id,SEL,long long))objc_msgSend)(self.backend,sel,size);
-}
-- (BOOL)canExpand { return NO; }
-- (BOOL)isExpanded { return NO; }
-- (BOOL)isImplicitlyExpanded { return NO; }
-- (BOOL)shouldExpandOnTouchAtPoint:(CGPoint)point { (void)point;return NO; }
-@end
-static C18FiveStandaloneView *C18CreateStandalone(UIView *module,UIView *backend) {
-    C18FiveState *state=State(backend,YES);
-    C18FiveStandaloneView *surface=[[C18FiveStandaloneView alloc] initWithFrame:backend.frame];
-    surface.backgroundColor=UIColor.clearColor;surface.clipsToBounds=NO;
-    surface.backend=backend;state.registeredModule=module;state.standaloneSurface=surface;
-    if (state.compactBar) {
-        state.compactBar.hidden=YES;state.applied=NO;
-        [surface addSubview:state.compactBar];
-    }
-    // The real setter has not attached backend yet on the factory path.
-    // The backend is otherwise removed by the original setContentView setter.
-    return surface;
-}
 static void C18ModuleContentHook(id self,SEL cmd,id content) {
     Class cls=objc_getClass("C18ConnectivityView");
-    if (NSThread.isMainThread && gC18StandaloneBuildAllowed && gMode==5 && cls &&
+    if (NSThread.isMainThread && gC18FactoryDepth && gMode==5 && cls &&
         [content isKindOfClass:cls] && Parts(content,NULL,NULL,NULL)) {
-        C18FiveStandaloneView *surface=C18CreateStandalone(self,content);
-        if (oModuleContent) oModuleContent(self,cmd,surface);
-        if (gViews) [gViews addObject:content];
-        return;
+        State(content,YES).registeredModule=self;
+        UIView *cluster=C18FiveGet(content,@"_cluster");cluster.hidden=YES;
     }
+    // Keep the real connection view, backgroundMaterial and native transitions.
     if (oModuleContent) oModuleContent(self,cmd,content);
+    if (cls && [content isKindOfClass:cls] && gViews) [gViews addObject:content];
 }
 static id C18ShellFactoryHook(id self,SEL cmd,id identifier,long long size,id instance,BOOL gallery) {
     if (!NSThread.isMainThread) return oShellFactory?oShellFactory(self,cmd,identifier,size,instance,gallery):nil;
     if (!gConfigLoaded) C18ReloadConfig();
-    BOOL previous=gC18StandaloneBuildAllowed;gC18StandaloneBuildAllowed=!gallery && gMode==5;
-    gC18FactoryDepth++;
-    id result=nil;
+    if (!gallery && gMode==5 && C18ShapeIdentifier(identifier)) size=C18ShapeSize(size);
+    if (!gallery) gC18FactoryDepth++;
     @try {
-        result=oShellFactory?oShellFactory(self,cmd,identifier,size,instance,gallery):nil;
+        id result=oShellFactory?oShellFactory(self,cmd,identifier,size,instance,gallery):nil;
         C18UptimeFixInstall();
         if ([result isKindOfClass:UIView.class]) C18UptimePrepareModule(result);
         return result;
-    } @finally { gC18StandaloneBuildAllowed=previous;if (gC18FactoryDepth) gC18FactoryDepth--; }
+    } @finally { if (!gallery && gC18FactoryDepth) gC18FactoryDepth--; }
 }
-static UIView *C18SyncStandaloneContent(UIView *module,UIView *content) {
-    if (!oModuleContent) return content;
-    SEL setter=NSSelectorFromString(@"setContentView:");
-    if (gMode==5 && ![content isKindOfClass:C18FiveStandaloneView.class]) {
-        Class native=objc_getClass("C18ConnectivityView");
-        if (native && [content isKindOfClass:native] && Parts(content,NULL,NULL,NULL) &&
-            !C18FiveBool(content,NSSelectorFromString(@"isExpanded")) &&
-            !C18FiveBool(content,NSSelectorFromString(@"isImplicitlyExpanded"))) {
-            C18FiveStandaloneView *surface=C18CreateStandalone(module,content);
-            oModuleContent(module,setter,surface);
-            // Read the container's actual geometry before the first frame.
-            [module setNeedsLayout];[module layoutIfNeeded];return surface;
-        }
-    } else if (gMode!=5 && [content isKindOfClass:C18FiveStandaloneView.class]) {
-        C18FiveStandaloneView *surface=(C18FiveStandaloneView *)content;UIView *backend=surface.backend;
-        C18FiveState *state=State(backend,NO);state.standaloneSurface=nil;
-        oModuleContent(module,setter,backend);
-        if (state.compactBar) [backend addSubview:state.compactBar];
-        Restore(backend,gMode==0);
-        [module setNeedsLayout];[module layoutIfNeeded];return backend;
+static UIView *C18SyncNativeContent(UIView *module,UIView *content) {
+    Class cls=objc_getClass("C18ConnectivityView");
+    if (gMode==5 && cls && [content isKindOfClass:cls] && Parts(content,NULL,NULL,NULL)) {
+        State(content,YES).registeredModule=module;
+        UIView *cluster=C18FiveGet(content,@"_cluster");cluster.hidden=YES;
+        if (gViews) [gViews addObject:content];
     }
     return content;
 }
@@ -439,8 +373,7 @@ static void C18DiscoverViews(void) {
         if ([module isKindOfClass:UIView.class]) C18UptimePrepareModule(module);
         id content=C18FiveObject(module,NSSelectorFromString(@"contentView"));
         if ([module isKindOfClass:UIView.class] && [content isKindOfClass:UIView.class])
-            content=C18SyncStandaloneContent(module,content);
-        if ([content isKindOfClass:C18FiveStandaloneView.class]) content=[(C18FiveStandaloneView *)content backend];
+            content=C18SyncNativeContent(module,content);
         if ([content isKindOfClass:cls]) [gViews addObject:content];
     }
 }
@@ -457,7 +390,7 @@ static void C18ApplyAll(void) {
 }
 static void C18BeforeNative(id self) {
     gDepth++;
-    if (!State(self,NO).standaloneSurface && (gMode==5 || gC18Presented) && C18FiveIsPresented() && ([(UIView *)self window] || (gMode==5 && C18FiveIsPreparing())) && gMode && C18Managed(self)) { UIView *cluster=C18FiveGet(self,@"_cluster"); cluster.hidden=YES; }
+    if ((gMode==5 || gC18Presented) && C18FiveIsPresented() && ([(UIView *)self window] || (gMode==5 && C18FiveIsPreparing())) && gMode && C18Managed(self)) { UIView *cluster=C18FiveGet(self,@"_cluster"); cluster.hidden=YES; }
 }
 static void C18AfterNative(id self) {
     if (gDepth) gDepth--;
@@ -471,7 +404,10 @@ static void C18LayoutHook(id self, SEL cmd) {
 }
 static void C18RolesHook(id self, SEL cmd) { C18BeforeNative(self); @try { if (oRoles) oRoles(self,cmd); } @finally { C18AfterNative(self); } }
 static void C18AlphasHook(id self, SEL cmd) { C18BeforeNative(self); @try { if (oAlphas) oAlphas(self,cmd); } @finally { C18AfterNative(self); } }
-static void C18GridHook(id self, SEL cmd, long long size) { C18BeforeNative(self); @try { if (oGrid) oGrid(self,cmd,size); } @finally { C18AfterNative(self); } }
+static void C18GridHook(id self, SEL cmd, long long size) {
+    if (gMode==5 && C18FiveIsPresented()) size=C18ShapeSize(size);
+    C18BeforeNative(self); @try { if (oGrid) oGrid(self,cmd,size); } @finally { C18AfterNative(self); }
+}
 static void C18ExpandedHook(id self, SEL cmd, BOOL value) { C18BeforeNative(self); @try { if (oExpanded) oExpanded(self,cmd,value); } @finally { C18AfterNative(self); } }
 static void C18WindowHook(id self, SEL cmd) {
     C18BeforeNative(self); @try { if (oWindow) oWindow(self,cmd); } @finally { C18AfterNative(self); }
@@ -599,12 +535,12 @@ static void C18ShellDismissHook(id self, SEL cmd) {
 // Native evidence: _presentListForItem: starts at 30 attempts and retries
 // every 50 ms; tries==0 makes one final provider read. Preserve those reads,
 // but bind each delayed continuation to the originating presentation/request.
-static void C18StandaloneListAttempt(UIView *view,long long item,int tries,
+static void C18ConnectivityListAttempt(UIView *view,long long item,int tries,
                                     C18FiveState *state,id shell,UIView *module,
                                     NSUInteger generation,NSUInteger token) {
     if (State(view,NO)!=state || state.listRequestToken!=token ||
         !C18ShellSessionMatches(shell,generation) || !gC18Presented || gMode!=5 ||
-        !state.standaloneSurface.window || state.registeredModule!=module ||
+        !view.window || state.registeredModule!=module ||
         !state.applied || C18Editing() || !C18Managed(view)) return;
     id legacy=C18FiveGet(view,@"_legacy");
     if (![legacy isKindOfClass:NSDictionary.class]) return;
@@ -621,14 +557,14 @@ static void C18StandaloneListAttempt(UIView *view,long long item,int tries,
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW,50*NSEC_PER_MSEC),dispatch_get_main_queue(),^{
             UIView *liveView=weakView,*liveModule=weakModule;id liveShell=weakShell;
             if (liveView && liveModule && liveShell)
-                C18StandaloneListAttempt(liveView,item,tries-1,state,liveShell,liveModule,generation,token);
+                C18ConnectivityListAttempt(liveView,item,tries-1,state,liveShell,liveModule,generation,token);
         });
         return;
     }
     if (![controller isKindOfClass:UIViewController.class])
         controller=((id(*)(id,SEL,id))objc_msgSend)(provider,selector,nil);
     if (state.listRequestToken!=token || !C18ShellSessionMatches(shell,generation) ||
-        gMode!=5 || !gC18Presented || !state.applied || !state.standaloneSurface.window ||
+        gMode!=5 || !gC18Presented || !state.applied || !view.window ||
         state.registeredModule!=module || C18Editing()) return;
     SEL anchored=NSSelectorFromString(@"presentMenuViewController:fromModuleView:");
     if ([controller isKindOfClass:UIViewController.class] &&
@@ -637,16 +573,58 @@ static void C18StandaloneListAttempt(UIView *view,long long item,int tries,
 }
 static void C18ConnectivityListHook(id self,SEL cmd,long long item,int tries) {
     C18FiveState *state=State(self,NO);
-    if (!state.standaloneSurface || gMode!=5) {
+    if (!state || gMode!=5) {
         if (oConnectivityList) oConnectivityList(self,cmd,item,tries);
         return;
     }
     id shell=C18FiveLiveShell();UIView *module=state.registeredModule;
     NSUInteger token=++state.listRequestToken;
-    C18StandaloneListAttempt(self,item,tries,state,shell,module,gC18PresentationGeneration,token);
+    C18ConnectivityListAttempt(self,item,tries,state,shell,module,gC18PresentationGeneration,token);
+}
+static id (*oShapeCandidates)(id,SEL,id);
+static void (*oShapeChange)(id,SEL,id,id);
+static id (*oShapeAdd)(id,SEL,id,id,NSUInteger);
+static void (*oShapeModuleSize)(id,SEL,long long);
+static BOOL C18ShapeEnabled(void) {
+    NSInteger mode=0; NSArray *slots=nil; C18FiveRead(&mode,&slots); return mode==5;
+}
+static id C18ShapeCandidates(id self,SEL cmd,id identifier) {
+    id original=oShapeCandidates(self,cmd,identifier);
+    if (!C18ShapeEnabled() || !C18ShapeIdentifier(identifier)) return original;
+    return @[@"CCUIIconGridSizeClassMedium",@"CCUIIconGridSizeClassSmallExtraWide"];
+}
+static void C18ShapeChange(id self,SEL cmd,id identifier,id sizeClass) {
+    if (C18ShapeEnabled() && C18ShapeIdentifier(identifier)) sizeClass=C18ShapeGridClass(sizeClass);
+    oShapeChange(self,cmd,identifier,sizeClass);
+}
+static id C18ShapeAdd(id self,SEL cmd,id identifier,id sizeClass,NSUInteger index) {
+    if (C18ShapeEnabled() && C18ShapeIdentifier(identifier)) sizeClass=C18ShapeGridClass(sizeClass);
+    return oShapeAdd(self,cmd,identifier,sizeClass,index);
+}
+static void C18ShapeModuleSize(id self,SEL cmd,long long size) {
+    if (C18ShapeEnabled()) {
+        id content=C18FiveObject(self,NSSelectorFromString(@"contentView"));
+        if ([content isKindOfClass:NSClassFromString(@"C18ConnectivityView")]) size=C18ShapeSize(size);
+    }
+    oShapeModuleSize(self,cmd,size);
+}
+static void C18ShapeHook(Class cls,SEL sel,const char *types,IMP replacement,IMP *original,BOOL *done) {
+    if (*done) return;
+    Method method=class_getInstanceMethod(cls,sel);
+    if (!method || strcmp(method_getTypeEncoding(method),types)) return;
+    *done=YES; MSHookMessageEx(cls,sel,replacement,original);
+}
+static void C18ShapeInstall(void) {
+    static BOOL candidates,change,add,moduleSize;
+    Class model=objc_getClass("C18IconState");
+    C18ShapeHook(object_getClass(model),@selector(supportedGridSizeClassesForIdentifier:),"@24@0:8@16",(IMP)C18ShapeCandidates,(IMP *)&oShapeCandidates,&candidates);
+    C18ShapeHook(model,@selector(changeGridSizeClassForIdentifier:toGridSizeClass:),"v32@0:8@16@24",(IMP)C18ShapeChange,(IMP *)&oShapeChange,&change);
+    C18ShapeHook(model,@selector(addModuleWithIdentifier:gridSizeClass:toListAtIndex:),"@40@0:8@16@24Q32",(IMP)C18ShapeAdd,(IMP *)&oShapeAdd,&add);
+    C18ShapeHook(objc_getClass("C18ModuleView"),@selector(setSize:),"v24@0:8q16",(IMP)C18ShapeModuleSize,(IMP *)&oShapeModuleSize,&moduleSize);
 }
 static void C18InstallViewHooks(void) {
     C18NativeLayoutRestoreInstall();
+    C18ShapeInstall();
     C18InstallButtonMirrors();
     C18PowerMenuInstall();
     Class shellClass=objc_getClass("C18Shell");

@@ -310,7 +310,7 @@ static BOOL C18HasSlider(UIView *view,NSUInteger depth) {
 }
 @implementation C18FiveModuleHost
 - (instancetype)initWithSlotID:(NSString *)slotID owner:(UIView *)owner {
-    if (!C18FiveIsPresented() || (!owner.window && !(C18FiveDisplayView(owner)!=owner && (C18FiveDisplayView(owner).window || C18FiveIsPreparing())))) return nil;
+    if (!C18FiveIsPresented() || !owner || (!owner.window && !C18FiveDisplayView(owner).window && !C18FiveIsPreparing())) return nil;
     if (!(self=[super initWithFrame:CGRectZero])) return nil;
     _slotID=[slotID copy]; _owner=owner; self.backgroundColor=UIColor.clearColor; self.clipsToBounds=NO;
     C18FiveInstallModuleHooks(); Class round=objc_getClass("C18RoundButton");

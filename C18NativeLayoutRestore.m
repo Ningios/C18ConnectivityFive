@@ -1,5 +1,6 @@
 #import "C18Five.h"
 #import "C18RemovedModules.h"
+#import "C18ConnectivityShape.h"
 #import <string.h>
 
 extern void MSHookMessageEx(Class,SEL,IMP,IMP *);
@@ -86,13 +87,38 @@ static id C18NativeWithoutPromos(id input) {
     return [result copy];
 }
 
+// Passive serialized-state normalization: no singleton reload or startup scan.
+static id C18NativeConnectivityShapes(id input) {
+    if (![input isKindOfClass:NSDictionary.class] || ![input[@"iconLists"] isKindOfClass:NSArray.class]) return input;
+    NSInteger mode=0; C18FiveRead(&mode,NULL); if (mode!=5) return input;
+    BOOL changed=NO; NSMutableArray *pages=[NSMutableArray array];
+    for (id page in input[@"iconLists"]) {
+        if (![page isKindOfClass:NSArray.class]) return input;
+        NSMutableArray *entries=[NSMutableArray array];
+        for (id entry in page) {
+            if (![entry isKindOfClass:NSDictionary.class]) return input;
+            if (C18ShapeIdentifier(entry[@"id"])) {
+                id old=entry[@"gridSize"], normalized=C18ShapeGridClass(old);
+                if (![normalized isEqual:old]) {
+                    NSMutableDictionary *copy=[entry mutableCopy];copy[@"gridSize"]=normalized;
+                    [entries addObject:[copy copy]];changed=YES;continue;
+                }
+            }
+            [entries addObject:entry];
+        }
+        [pages addObject:[entries copy]];
+    }
+    if (!changed) return input;
+    NSMutableDictionary *result=[input mutableCopy];result[@"iconLists"]=[pages copy];return [result copy];
+}
+
 static void C18NativeLoad(id state,SEL cmd,id input) {
-    input=C18NativeWithoutPromos(input);
+    input=C18NativeConnectivityShapes(C18NativeWithoutPromos(input));
     if (![input isKindOfClass:NSDictionary.class] || !input[@"C18FiveColumnGridVersion"]) {
         gNativeLoad(state,cmd,input); return;
     }
     NSUserDefaults *journal=[[NSUserDefaults alloc] initWithSuiteName:@"com.cc18.fivecolumn.migration"];
-    NSDictionary *backup=C18NativeWithoutPromos([journal dictionaryForKey:@"OriginalStateBeforeV2"]);
+    NSDictionary *backup=C18NativeConnectivityShapes(C18NativeWithoutPromos([journal dictionaryForKey:@"OriginalStateBeforeV2"]));
     NSDictionary *native=C18NativeRestoreState(input,backup);
     if (native==input) { gNativeLoad(state,cmd,input); return; }
     // Preserve the replaced representation. Never clear global CC18 preferences
