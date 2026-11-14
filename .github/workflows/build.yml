@@ -21,7 +21,7 @@ jobs:
           python3 tools/settings_cleanup.py Vendor/baseline.deb build/ControlCenter18Prefs-clean
           xcrun codesign --force --sign - --timestamp=none build/ControlCenter18Prefs-clean
           xcrun codesign --verify --strict --all-architectures build/ControlCenter18Prefs-clean
-          SRC=(Tweak.m C18FiveConfig.m C18FiveModules.m C18FiveEditor.m C18CarrierNames.m C18DataSwitch.m C18NativeLayoutRestore.m C18PowerMenu.m C18GlyphSources.m C18CellularRate.m C18PressDriver.m C18Localization.m)
+          SRC=(Tweak.m C18FiveConfig.m C18FiveModules.m C18FiveEditor.m C18CarrierNames.m C18DataSwitch.m C18NativeLayoutRestore.m C18PowerMenu.m C18GlyphSources.m C18CellularRate.m C18PressDriver.m C18Localization.m C18UptimeFix.m)
           SIMSRC=(CCSIMModule.m C18SIMController.m C18SIMService.m C18SIMRow.m)
           for ARCH in arm64 arm64e; do
             xcrun --sdk iphoneos clang -fobjc-arc -O2 -Werror=implicit-function-declaration -Werror=objc-method-access -Werror=incompatible-function-pointer-types -isysroot "$SDK" -target "${ARCH}-apple-ios15.0" -dynamiclib -I. -framework Foundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreFoundation -Wl,-undefined,dynamic_lookup -Wl,-install_name,@loader_path/C18ConnectivityFive.dylib "${SRC[@]}" -o "build/C18ConnectivityFive-${ARCH}.dylib"

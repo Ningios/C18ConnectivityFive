@@ -370,8 +370,11 @@ static void (*gOriginalDragPress)(id,SEL,id);
     __weak C18FiveEditorController *weakSelf=self;
     if (ip.section==0) {
         choice.title=@"布局模式"; choice.selected=[@(_mode) stringValue];
-        choice.groups=@[@{@"title":@"布局模式",@"entries":@[
-            @{@"id":@"0",@"title":@"原版布局"},@{@"id":@"4",@"title":@"自定义四键"},@{@"id":@"5",@"title":@"自定义五键"}]}];
+        choice.groups=@[
+            @{@"title":@"布局模式",@"entries":@[
+                @{@"id":@"0",@"title":@"原版布局"},@{@"id":@"4",@"title":@"自定义四键"}]},
+            @{@"title":@"自定义五键",@"entries":@[
+                @{@"id":@"5",@"title":@"自定义五键"}]}];
         choice.choose=^BOOL(NSString *value) {
             C18FiveEditorController *editor=weakSelf; if (!editor) return NO;
             NSInteger mode=[value integerValue];
@@ -448,7 +451,9 @@ static void C18FiveDragPressHook(id self,SEL cmd,id gesture) {
     UIView *module=press.view;
     UIView *content=C18FiveObject(module,NSSelectorFromString(@"contentView"));
     Class connectivity=objc_getClass("C18ConnectivityView");
-    BOOL target=connectivity && [content isKindOfClass:connectivity] &&
+    Class standalone=objc_getClass("C18FiveStandaloneView");
+    BOOL target=((connectivity && [content isKindOfClass:connectivity]) ||
+        (standalone && [content isKindOfClass:standalone])) &&
         C18FiveBool(module,NSSelectorFromString(@"isEditing"));
     C18FivePressState *state=objc_getAssociatedObject(press,&kC18EditorInstalled);
     if (press.state==UIGestureRecognizerStateBegan && target) {

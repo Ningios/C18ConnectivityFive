@@ -26,6 +26,10 @@ FOUNDATION_EXPORT void C18FiveInstallModuleHooks(void);
 FOUNDATION_EXPORT void C18FiveModulesSetPresented(BOOL presented);
 // Only a real Shell presentation supplies this weak, non-creating reference.
 FOUNDATION_EXPORT BOOL C18FiveIsPresented(void);
+// True only inside a real Shell animation/presentation callback, never startup.
+FOUNDATION_EXPORT BOOL C18FiveIsPreparing(void);
+// Actual visible content for an independent five-key surface.
+FOUNDATION_EXPORT UIView *C18FiveDisplayView(UIView *backend);
 FOUNDATION_EXPORT id C18FiveLiveShell(void);
 FOUNDATION_EXPORT NSUInteger C18FivePresentationGeneration(void);
 FOUNDATION_EXPORT void C18DataSwitchActivate(void);

@@ -6,6 +6,7 @@ from promo_cleanup import MAIN,removable,verify_signed_main,TOKENS
 from package import BASE,BASE_SHA256,VERSION,BUNDLE_VERSION,PREFIX,SIM,EXPECTED_RESOURCES,RECORDING_RESOURCES,deb_members,archive
 from integrity import checked_slices,signature_check,fields as control_fields,entry_meta
 from settings_cleanup import PREFS,screenshot,verify_signed_prefs
+from power_cleanup import OLD_POWER_FILES,remove_old_power
 
 def verify(path):
     raw=path.read_bytes();members=deb_members(raw)
@@ -55,7 +56,9 @@ def verify(path):
     directory_targets={p for n in localization_targets for p in ['/'.join(n.split('/')[:i]) for i in range(1,len(n.split('/')))] if p not in old}
     shots={n for n in old if screenshot(n)}
     assert len(shots)==15 and sum(len(old[n][1] or b'') for n in shots)==1663235
-    assert set(old)-set(new)==removed|drafts|shots|unused and len(removed)==31 and len(drafts)==14
+    expected_power=dict(old);power_cleanup=remove_old_power(expected_power)
+    assert OLD_POWER_FILES.isdisjoint(new)
+    assert set(old)-set(new)==removed|drafts|shots|unused|OLD_POWER_FILES and len(removed)==31 and len(drafts)==14
     assert not any(screenshot(n) for n in new)
     settings_signature=verify_signed_prefs(old[PREFS][1],new[PREFS][1])
     assert set(new)-set(old)<=allowed|localization_targets|directory_targets
@@ -66,7 +69,7 @@ def verify(path):
     assert not any(removable(name) for name in new)
     main_signature=verify_signed_main(old[MAIN][1],new[MAIN][1])
     for name in old:
-        if name in removed|drafts|shots|unused or name==MAIN:continue
+        if name in removed|drafts|shots|unused|OLD_POWER_FILES or name==MAIN:continue
         assert name in new,'Baseline entry removed: '+name
         if name not in allowed|localization_targets:
             oi,ob=old[name];ni,nb=new[name]
@@ -115,6 +118,10 @@ def verify(path):
         cpu,sub,offset,size,align=struct.unpack_from('>IIIII',sim,8+i*20)
         assert sub in (0,0x80000002) and len(sim[offset:offset+size])==size
     lib=new[PREFIX+'C18ConnectivityFive.dylib'][1];assert struct.unpack_from('>II',lib)==(0xcafebabe,2)
+    for forbidden in (b'C18PowerRequest',b'C18PowerPresenterHook',b'C18PowerAction',b'C18PowerTop'):
+        assert forbidden not in lib,('OLD_POWER_CAPTURE_RETAINED',forbidden)
+    assert b'UIContextMenuInteraction' in lib and b'posix_spawn' in lib
+    assert b'C18FiveIsPreparing' in lib and b'addAnimationsToBatch:forState:' in lib
     assert b'C18FiveColumnInstall' not in lib and b'C18FiveColumnApply' not in lib
     slices=[]
     for i in range(2):
@@ -137,6 +144,6 @@ def verify(path):
         else:assert sub==0
         slices.append({'subtype':hex(sub),'signature':signature,'fixups':formats})
     assert {s['subtype'] for s in slices}=={'0x0','0x80000002'}
-    report={'version':VERSION,'sha256':hashlib.sha256(raw).hexdigest(),'size':len(raw),'baseline_sha256':BASE_SHA256,'baseline_data_entries':len(old),'preserved_original_entries':sum(name in new and record(old[name])==record(new[name]) for name in old),'retained_original_entries':len(set(old)&set(new)),'strict_integrity':strict_integrity,'sim_internal_build':simInfo['CFBundleVersion'],'dylib_sha256':hashlib.sha256(lib).hexdigest(),'sim_module_sha256':hashlib.sha256(sim).hexdigest(),'old_sim_presentation_removed':True,'main_five_column_feature_removed':True,'slices':slices,'runtime_verified':False,'promotion_removed_entries':len(removed),'unused_design_sources_removed':len(drafts),'localization_resources':len(LOCALIZATION),'compression':'xz-lzma2; decoder<=40MiB','jpeg_lossless_resources':len(jpeg_changes),'jpeg_uncompressed_saved_bytes':static_report['jpeg_uncompressed_saved_bytes'],'png_recompressed_resources':len(png_changes),'png_uncompressed_saved_bytes':static_report['png_uncompressed_saved_bytes'],'smaller_than_issued_compact_beta6':True,'main_library_signature':main_signature,'settings_carousel_removed':True,'settings_screenshot_files_removed':14,'settings_screenshot_bytes_removed':1663235,'settings_signature':settings_signature}
+    report={'version':VERSION,'sha256':hashlib.sha256(raw).hexdigest(),'size':len(raw),'baseline_sha256':BASE_SHA256,'baseline_data_entries':len(old),'preserved_original_entries':sum(name in new and record(old[name])==record(new[name]) for name in old),'retained_original_entries':len(set(old)&set(new)),'strict_integrity':strict_integrity,'sim_internal_build':simInfo['CFBundleVersion'],'dylib_sha256':hashlib.sha256(lib).hexdigest(),'sim_module_sha256':hashlib.sha256(sim).hexdigest(),'old_sim_presentation_removed':True,'main_five_column_feature_removed':True,'slices':slices,'runtime_verified':False,'promotion_removed_entries':len(removed),'unused_design_sources_removed':len(drafts),'localization_resources':len(LOCALIZATION),'compression':'xz-lzma2; decoder<=40MiB','jpeg_lossless_resources':len(jpeg_changes),'jpeg_uncompressed_saved_bytes':static_report['jpeg_uncompressed_saved_bytes'],'png_recompressed_resources':len(png_changes),'png_uncompressed_saved_bytes':static_report['png_uncompressed_saved_bytes'],'smaller_than_issued_compact_beta6':True,'main_library_signature':main_signature,'settings_carousel_removed':True,'settings_screenshot_files_removed':14,'settings_screenshot_bytes_removed':1663235,'settings_signature':settings_signature,'power_cleanup':power_cleanup,'five_first_frame_prepared':True}
     path.with_suffix('.verification.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2));return report
 if __name__=='__main__':verify(Path(sys.argv[1]))

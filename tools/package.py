@@ -6,6 +6,7 @@ from pathlib import Path
 from mkdeb import pack
 from promo_cleanup import cleanup,verify_cleanup,verify_signed_main,MAIN
 from settings_cleanup import PREFS,remove_resources,verify_signed_prefs
+from power_cleanup import remove_old_power
 VERSION='3.0-beta6'
 BUNDLE_VERSION=VERSION.rsplit('beta',1)[1]
 BASE_SHA256='4c2f36e17adbfe6d78412e629d749ac331d5eaabd003b18286ee37a14a2979e2'
@@ -89,6 +90,8 @@ def main():
         promo['control_unchanged']=True
         if args.promo_report:args.promo_report.write_text(json.dumps(promo,indent=2,ensure_ascii=False)+'\n')
         print(json.dumps(promo,indent=2,ensure_ascii=False));return
+    power=remove_old_power(data)
+    Path('build/power-cleanup-validation.json').write_text(json.dumps(power,indent=2)+'\n')
     signed=Path('build/ControlCenter18-clean.dylib').read_bytes()
     promo['signature_verification']=verify_signed_main(original[MAIN][1],signed)
     promo['packaging_blocked']=False
