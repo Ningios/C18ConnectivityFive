@@ -1,0 +1,48 @@
+name: build-controlcenter18-beta6
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify reviewed source and baseline
+        run: python3 tools/verify_source.py
+      - name: Compile and sign
+        run: |
+          set -euo pipefail
+          SDK="$(xcrun --sdk iphoneos --show-sdk-path)"
+          mkdir -p build dist
+          python3 tools/promo_cleanup.py Vendor/baseline.deb build/ControlCenter18-clean.dylib
+          xcrun codesign --force --sign - --timestamp=none build/ControlCenter18-clean.dylib
+          xcrun codesign --verify --strict build/ControlCenter18-clean.dylib
+          python3 tools/settings_cleanup.py Vendor/baseline.deb build/ControlCenter18Prefs-clean
+          xcrun codesign --force --sign - --timestamp=none build/ControlCenter18Prefs-clean
+          xcrun codesign --verify --strict --all-architectures build/ControlCenter18Prefs-clean
+          SRC=(Tweak.m C18FiveConfig.m C18FiveModules.m C18FiveEditor.m C18CarrierNames.m C18DataSwitch.m C18NativeLayoutRestore.m C18PowerMenu.m C18GlyphSources.m C18CellularRate.m C18PressDriver.m C18Localization.m)
+          SIMSRC=(CCSIMModule.m C18SIMController.m C18SIMService.m C18SIMRow.m)
+          for ARCH in arm64 arm64e; do
+            xcrun --sdk iphoneos clang -fobjc-arc -O2 -Werror=implicit-function-declaration -Werror=objc-method-access -Werror=incompatible-function-pointer-types -isysroot "$SDK" -target "${ARCH}-apple-ios15.0" -dynamiclib -I. -framework Foundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreFoundation -Wl,-undefined,dynamic_lookup -Wl,-install_name,@loader_path/C18ConnectivityFive.dylib "${SRC[@]}" -o "build/C18ConnectivityFive-${ARCH}.dylib"
+            xcrun --sdk iphoneos clang -fobjc-arc -fblocks -O2 -fvisibility=hidden -Werror=implicit-function-declaration -Werror=objc-method-access -Werror=incompatible-function-pointer-types -isysroot "$SDK" -target "${ARCH}-apple-ios15.0" -dynamiclib -I. -Ftools/linker -framework Foundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreTelephony -Wl,-needed_framework,ControlCenterUIKit -Wl,-fixup_chains -Wl,-install_name,@loader_path/CCSIM "${SIMSRC[@]}" -o "build/CCSIM-${ARCH}"
+          done
+          xcrun lipo -create -output build/CCSIM build/CCSIM-arm64 build/CCSIM-arm64e
+          xcrun lipo -create -output build/C18ConnectivityFive.dylib build/C18ConnectivityFive-arm64.dylib build/C18ConnectivityFive-arm64e.dylib
+          python3 tools/strip_runtime.py build/CCSIM build/C18ConnectivityFive.dylib
+          xcrun codesign --force --sign - --timestamp=none build/CCSIM
+          xcrun codesign --force --sign - --timestamp=none build/C18ConnectivityFive.dylib
+      - name: Package and verify
+        env:
+          CC18_BASE_DEB: Vendor/baseline.deb
+        run: |
+          set -euo pipefail
+          python3 tools/package.py
+          python3 tools/verify.py dist/com.evgeniy558.controlcenter18_3.0-beta6_iphoneos-arm64e.deb
+          python3 tools/verify_final_macos.py dist/com.evgeniy558.controlcenter18_3.0-beta6_iphoneos-arm64e.deb
+          shasum -a 256 dist/*.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: controlcenter18-beta6
+          path: dist/com.evgeniy558.controlcenter18_3.0-beta6_iphoneos-arm64e.deb
+          if-no-files-found: error

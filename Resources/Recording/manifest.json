@@ -1,0 +1,12 @@
+{
+  "Resources/Recording/replaykit-v2.ca/main.caml": {
+    "target": "Library/Application Support/ControlCenter18/Packages/replaykit-v2.ca/main.caml",
+    "sha256": "5d0e0107e19d97412bd3e5235d70875bad8c6eb2d3378805999aca81bb92d0e2",
+    "source": "Restore native ring/rec; remove NEW Record and all 33 state/transition references"
+  },
+  "Resources/Recording/replaykit-v2_IC.ca/main.caml": {
+    "target": "Library/Application Support/ControlCenter18/Packages/replaykit-v2_IC.ca/main.caml",
+    "sha256": "5d0e0107e19d97412bd3e5235d70875bad8c6eb2d3378805999aca81bb92d0e2",
+    "source": "Restore native ring/rec; remove NEW Record and all 33 state/transition references"
+  }
+}

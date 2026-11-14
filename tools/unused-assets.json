@@ -1,0 +1,65 @@
+{
+  "reason": "Pinned Mica editor leftover images: every package descriptor reviewed; VolumeBold loads only assets/REF.png, AnnounceNotifications is entirely vector. No dynamic filename literal exists in other package files. Keep descriptor/runtime assets unchanged.",
+  "files": {
+    "Library/Application Support/ControlCenter18/Packages/AnnounceNotifications.ca/assets/spokenNotifications_fill 1.pdf": {
+      "sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "bytes": 4771,
+      "issued_sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "issued_bytes": 4771
+    },
+    "Library/Application Support/ControlCenter18/Packages/AnnounceNotifications.ca/assets/spokenNotifications_fill 2.pdf": {
+      "sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "bytes": 4771,
+      "issued_sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "issued_bytes": 4771
+    },
+    "Library/Application Support/ControlCenter18/Packages/AnnounceNotifications.ca/assets/spokenNotifications_fill.pdf": {
+      "sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "bytes": 4771,
+      "issued_sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "issued_bytes": 4771
+    },
+    "Library/Application Support/ControlCenter18/Packages/SpokenNotificationsModule/AnnounceNotifications.ca/assets/spokenNotifications_fill 1.pdf": {
+      "sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "bytes": 4771,
+      "issued_sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "issued_bytes": 4771
+    },
+    "Library/Application Support/ControlCenter18/Packages/SpokenNotificationsModule/AnnounceNotifications.ca/assets/spokenNotifications_fill 2.pdf": {
+      "sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "bytes": 4771,
+      "issued_sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "issued_bytes": 4771
+    },
+    "Library/Application Support/ControlCenter18/Packages/SpokenNotificationsModule/AnnounceNotifications.ca/assets/spokenNotifications_fill.pdf": {
+      "sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "bytes": 4771,
+      "issued_sha256": "2d6039ada2bced0ee7fbc0095133aa3afe6e089a07af95703b364d840543604a",
+      "issued_bytes": 4771
+    },
+    "Library/Application Support/ControlCenter18/Packages/VolumeBold.ca/assets/pastedImage@2x 1.png": {
+      "sha256": "edc862a8ad88bc5e07e3af7237bf7ae5997f9a0b65792d6ab7e0c5df9b3d54e7",
+      "bytes": 307298,
+      "issued_sha256": "67fd1b92bf210a85f9dc7af1b84cc1953a36834ea0849801de334f2ee67f6c14",
+      "issued_bytes": 233872
+    },
+    "Library/Application Support/ControlCenter18/Packages/VolumeBold.ca/assets/pastedImage@2x.png": {
+      "sha256": "965320c106dc8f381dd7e7989c6f34cc68a9551c4c62fa5906c95a5f69e3ad76",
+      "bytes": 1660,
+      "issued_sha256": "ecbdc5ee707e04df05e28d5c8cac1e810909968c47c421ccc0c754f767554746",
+      "issued_bytes": 1437
+    }
+  },
+  "descriptor_sha256": {
+    "Library/Application Support/ControlCenter18/Packages/AnnounceNotifications.ca/assetManifest.caml": "0b5d74fe5cf879d832fb8b29c8141954a86eb90e275dd848344c83cd952cf744",
+    "Library/Application Support/ControlCenter18/Packages/AnnounceNotifications.ca/index.xml": "8cc45be3ee9539f0f30b017ef0c8b81f1b04d5e2e1577af7879bd0f5d71c28f8",
+    "Library/Application Support/ControlCenter18/Packages/AnnounceNotifications.ca/main.caml": "dc6da329d4a33e5733fff3f158936f9777bff81eec44bac20e931cc4a6d9ff6e",
+    "Library/Application Support/ControlCenter18/Packages/SpokenNotificationsModule/AnnounceNotifications.ca/assetManifest.caml": "0b5d74fe5cf879d832fb8b29c8141954a86eb90e275dd848344c83cd952cf744",
+    "Library/Application Support/ControlCenter18/Packages/SpokenNotificationsModule/AnnounceNotifications.ca/index.xml": "8cc45be3ee9539f0f30b017ef0c8b81f1b04d5e2e1577af7879bd0f5d71c28f8",
+    "Library/Application Support/ControlCenter18/Packages/SpokenNotificationsModule/AnnounceNotifications.ca/main.caml": "dc6da329d4a33e5733fff3f158936f9777bff81eec44bac20e931cc4a6d9ff6e",
+    "Library/Application Support/ControlCenter18/Packages/VolumeBold.ca/assetManifest.caml": "0b5d74fe5cf879d832fb8b29c8141954a86eb90e275dd848344c83cd952cf744",
+    "Library/Application Support/ControlCenter18/Packages/VolumeBold.ca/index.xml": "8cc45be3ee9539f0f30b017ef0c8b81f1b04d5e2e1577af7879bd0f5d71c28f8",
+    "Library/Application Support/ControlCenter18/Packages/VolumeBold.ca/main.caml": "eb0dabbecac098e3ad3c403fc46bdc71daf92628a873aa2ab953ba966f39247b"
+  },
+  "runtime_verified": false
+}

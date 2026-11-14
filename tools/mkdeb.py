@@ -2,7 +2,7 @@
 import os,sys,time
 
 def pack(out, d):
-    names=['debian-binary','control.tar.gz','data.tar.gz']
+    names=['debian-binary','control.tar.gz','data.tar.xz']
     with open(out,'wb') as f:
         f.write(b'!<arch>\n')
         for name in names:
