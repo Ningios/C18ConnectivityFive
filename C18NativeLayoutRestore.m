@@ -165,11 +165,16 @@ void C18NativeLayoutRestoreRequestReload(void) {
     id shell=C18FiveLiveShell();
     if (!shell || !C18FiveIsPresented()) { gNativeReloadPending=YES; return; }
     gNativeReloadPending=NO;
-    // The sheet has closed and the existing Shell is live. Refresh its native
-    // model once so the independently scoped size change reaches reloadModules.
+    // Change only this module's grid class. Reloading the whole icon state
+    // from disk could discard unsaved edits to the original connection card.
+    NSInteger mode=0; C18FiveRead(&mode,NULL);
     Class cls=objc_getClass("C18IconState");
     id state=cls?C18FiveObject((id)cls,NSSelectorFromString(@"shared")):nil;
-    if (state) C18FiveVoid(state,NSSelectorFromString(@"reloadFromDisk"));
+    SEL change=NSSelectorFromString(@"changeGridSizeClassForIdentifier:toGridSizeClass:");
+    if ((mode==4 || mode==5) && C18HookCanInstall(object_getClass(state),change,"v",@[@"@",@"@"])) {
+        id grid=mode==4?@"CCUIIconGridSizeClassMedium":@"CCUIIconGridSizeClassSmallExtraWide";
+        ((void(*)(id,SEL,id,id))objc_msgSend)(state,change,C18FiveNativeModuleIdentifier(),grid);
+    }
     C18FiveVoid(shell,NSSelectorFromString(@"reloadModules"));
     C18FiveVoid(shell,NSSelectorFromString(@"layout"));
 }

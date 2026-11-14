@@ -1,7 +1,7 @@
 {
   "version": "3.0-beta6",
   "base_commit": "fd1422cd1c12052cad67f2c955d997c1dd02350d",
-  "previous_commit": "953bedbb5b8f532cbac4df45fd1120ceca1a4e35",
+  "previous_commit": "ce125c3ab4eca45a08a969f0d5cab606dbe42aa9",
   "base_sha256": "4c2f36e17adbfe6d78412e629d749ac331d5eaabd003b18286ee37a14a2979e2",
   "sha256": {
     ".github/workflows/build.yml": "dd94a71982b65e6bd802a7b4d57bb8b3f449597d6a078935279efa1e7531d9d2",
@@ -22,7 +22,7 @@
     "C18HookRuntime.h": "b28cf6d4f0530329ca57189bfe7df63222968fbdccc67bf22aaa03a7525c4a32",
     "C18Localization.h": "d7f2b9a9eb14fa785d4d705afb79ad20788f0b0dbca3ea6b16a1f98330678903",
     "C18Localization.m": "6f9845c07ef8103a64afcd88e2a8b87b4c1e1f8d3a67e177ee7e433acdcc70ed",
-    "C18NativeLayoutRestore.m": "db427963f50d5fc6a04166bdde283c8ba79ae323426995c3ce136d5027ac2d5a",
+    "C18NativeLayoutRestore.m": "e98bf2125e615ae2a7abd61cf554d4b1002815464467aec57beb4d02ac5a9010",
     "C18PowerBackend.h": "1a4ed0c77e007c2983fcd926147eb3b64242986b66203238264b75ce68ada479",
     "C18PowerMenu.m": "f291aaa5e3bd74f3099cbd0048b117029a065473ef92fbc6f501270942bf8d1d",
     "C18PressDriver.h": "72413b1b77cf8334d8cb7a98b1ed3dc75dd123053878f6502a744c07fe78b66b",
@@ -54,7 +54,7 @@
     "Tweak.m": "534f66bb254c2c309cbf82386d6f52785344bb5ea56a6de64db5cad0a3cdaaa1",
     "Vendor/baseline.deb": "4c2f36e17adbfe6d78412e629d749ac331d5eaabd003b18286ee37a14a2979e2",
     "tests/geometry_smoke.c": "61daf55c45aed740b3f816cbba2dcccc49956847bdf8f3d4e3c24addc0d7f7f8",
-    "tests/independent_contract.py": "ade26af4e858728be1160e5573d8221290c334aa38e2c78b35198849df6d543b",
+    "tests/independent_contract.py": "611c6d2642a16a6d19ae575648a6155157988f57c5488b2ff3fb61b7f8c7d589",
     "tools/description.py": "09829cdd053a755a9214de77064e71c8a6da371decee13b6b8a3bb3899deab5c",
     "tools/extract_deb.py": "ab9c64b8b15e2a1e8cb48bb6c45349150f9e0d84a0e34f0146a54449815e8e35",
     "tools/integrity.py": "2d57ff789eac0d4307be9b0a20355e3d538294941c2aacabbf6489234c2e16e1",

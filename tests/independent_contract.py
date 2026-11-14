@@ -17,6 +17,10 @@ assert 'BOOL target=C18ShapeIdentifier(C18FiveObject(module,NSSelectorFromString
 state=read('C18NativeLayoutRestore.m')
 assert 'C18NativeEnsureIndependentModule' not in state
 assert 'if (C18ShapeIdentifier(entry[@"id"]))' in state
+reload=state.split('void C18NativeLayoutRestoreRequestReload(void) {',1)[1].split('BOOL C18NativeLayoutRestoreHasPendingReload',1)[0]
+assert 'reloadFromDisk' not in reload
+assert 'changeGridSizeClassForIdentifier:toGridSizeClass:' in reload
+assert 'C18FiveNativeModuleIdentifier(),grid' in reload
 info=plistlib.loads((r/'ConnectivityFiveModule.bundle/Info.plist').read_bytes())
 assert info['CFBundleIdentifier']=='com.ning.c18connectivityfive'
 assert info['NSPrincipalClass']=='C18ConnectivityFiveModule'
