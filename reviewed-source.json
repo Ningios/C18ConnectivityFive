@@ -1,7 +1,7 @@
 {
   "version": "3.0-beta6",
   "base_commit": "fd1422cd1c12052cad67f2c955d997c1dd02350d",
-  "previous_commit": "c64c467adb596bbe83e41911ecf6de1a8926257c",
+  "previous_commit": "b437e890e223e675dd509911bccab8564f64994f",
   "base_sha256": "4c2f36e17adbfe6d78412e629d749ac331d5eaabd003b18286ee37a14a2979e2",
   "sha256": {
     ".github/workflows/build.yml": "cb012f4a887e46ccea1c8ff293381b6e4c0788587bdcdd4e5fe0c1ae110442d8",
@@ -50,11 +50,12 @@
     "Resources/Recording/replaykit-v2_IC.ca/main.caml": "5d0e0107e19d97412bd3e5235d70875bad8c6eb2d3378805999aca81bb92d0e2",
     "Tweak.m": "34c41fbe917ea7664c43811c669560076eb23ddc6b5f2e7c3adda52b1f307259",
     "Vendor/baseline.deb": "4c2f36e17adbfe6d78412e629d749ac331d5eaabd003b18286ee37a14a2979e2",
+    "tools/description.py": "09829cdd053a755a9214de77064e71c8a6da371decee13b6b8a3bb3899deab5c",
     "tools/extract_deb.py": "ab9c64b8b15e2a1e8cb48bb6c45349150f9e0d84a0e34f0146a54449815e8e35",
     "tools/integrity.py": "2d57ff789eac0d4307be9b0a20355e3d538294941c2aacabbf6489234c2e16e1",
     "tools/linker/ControlCenterUIKit.framework/ControlCenterUIKit.tbd": "92a4f2cdefc6fcb0f9a96dc8089ff673d6189d868d96d4db554302dd525b7158",
     "tools/mkdeb.py": "6c01c5f34a12abb5aa095242515ca0a8e44d7d707f2ca829948debbba662089a",
-    "tools/package.py": "6425bed70291d09307166d0b1010f8fbfa70908ee333db0ffc916ae4648fc244",
+    "tools/package.py": "49483d273644ab91d7724e941df0da13eca14cc5e85364ec6b383b2059b2f7e4",
     "tools/power_cleanup.py": "d079b32c7d93790ebff609e0a2e441a75fd2e4cc76ec674baf6ab44dcfe36497",
     "tools/promo-patches.json": "7069c9d0366247dc747a08b0feb03b88ad3b2fa25bb8b208a968c816945d312d",
     "tools/promo_cleanup.py": "6401d8188158c525e3de2d3ff82f2958969f4b2ca1e9f35346e9b9e9846b2522",
@@ -62,7 +63,7 @@
     "tools/slim.py": "285e2a738edca893d21ff78953f56e697862504be534d9fcb1ecff2f759c8b8c",
     "tools/strip_runtime.py": "d3542378552a760536273432722dfe4d8c2da5c9026f915128652c339ebca382",
     "tools/unused-assets.json": "fc04093099af39fdf263c658dc3e74a5eaf41a10174672b2904cc657600b07c9",
-    "tools/verify.py": "577447d244da4ee937371c1616cd7c531780222114585482450966ab21e4fa9f",
+    "tools/verify.py": "3b78829b5f4a810a4754a4ba053fc34e9571d8b2566c2eee286535b2dc59b9dd",
     "tools/verify_final_macos.py": "7cf25dac4d53e9c70283bae59db30b0dee9a2c0573e9ed6445a0f27f8ae48abe",
     "tools/verify_source.py": "2ceb26f72c4c89e2e4efd377e3e5e244f286f73b4a815800d40365f78618287a"
   }

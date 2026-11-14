@@ -28,7 +28,9 @@ def verify(path):
     assert set(original_fields)==set(actual_fields)
     permitted={'Version':VERSION,'Author':'Ning&evgeniy558','Maintainer':'Ning&evgeniy558','Installed-Size':str(sum(len(e[1]) for e in new.values() if e[1] is not None)//1024)}
     for key,value in original_fields.items():
-        if key=='Description':assert actual_fields[key]=='ControlCenter18 beta6 with configurable connectivity and cellular controls'+value[value.index('\n'):]
+        if key=='Description':
+            from description import DESCRIPTION
+            assert actual_fields[key]==DESCRIPTION
         else:assert actual_fields[key]==permitted.get(key,value),key
     for name in control:assert entry_meta(control[name],False)==entry_meta(original_control[name],False),name
     text=control['control'][1].decode();assert text.endswith('\n')
@@ -36,7 +38,9 @@ def verify(path):
     assert fields['Version']==VERSION and fields['Architecture']=='iphoneos-arm64e'
     assert fields['Maintainer']==fields['Author']=='Ning&evgeniy558'
     allowed={SIM+'CCSIM',SIM+'Info.plist',PREFIX+'C18ConnectivityFive.dylib',PREFIX+'C18ConnectivityFive.plist',PREFIX+'C18DataSwitchGlyph.png'}|{SIM+Path(n).name for n in EXPECTED_RESOURCES if 'CCSIM.bundle' in n}|{'Library/ControlCenter/Bundles/CCSwitchDataModule.bundle/'+Path(n).name for n in EXPECTED_RESOURCES if 'CCSwitchDataModule.bundle' in n}
-    allowed|={entry['target'] for entry in RECORDING_RESOURCES.values()}|{PREFS}
+    from description import DEPICTION,verify_description
+    verify_description(control,new)
+    allowed|={entry['target'] for entry in RECORDING_RESOURCES.values()}|{PREFS,DEPICTION}
     def record(entry):
         info,data=entry
         return (info.type,info.mode,info.uid,info.gid,info.linkname,data)

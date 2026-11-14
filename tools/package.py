@@ -126,6 +126,8 @@ def main():
         else:out.append(line)
     for key in fields.keys()-seen:out.append(key+': '+fields[key])
     overlay(control,'control',('\n'.join(out).rstrip()+'\n').encode())
+    from description import apply_description
+    apply_description(control,data)
     members=Path('dist/members');members.mkdir(parents=True,exist_ok=True)
     (members/'debian-binary').write_bytes(b'2.0\n');(members/'control.tar.gz').write_bytes(serialize(control));(members/'data.tar.xz').write_bytes(compress_data(serialize(compression_order(data),False)))
     pack(str(OUT),str(members));assert OUT.stat().st_size<3793436,'Package must be smaller than issued compact beta6';print(OUT,OUT.stat().st_size,hashlib.sha256(OUT.read_bytes()).hexdigest())
