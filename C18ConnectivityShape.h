@@ -1,18 +1,14 @@
 #pragma once
 #import <Foundation/Foundation.h>
 
-// Original _C18IsConnectivityModule also accepts numbered instances (#2+).
+// Only the third, package-owned module is controlled by the five-key layout.
+// The Apple ConnectivityModule and the existing connectivity2 instance keep
+// their native identifiers, grid candidates, and resize behavior untouched.
+static inline NSString *C18FiveNativeModuleIdentifier(void) {
+    return @"com.ning.c18connectivityfive";
+}
 static inline BOOL C18ShapeIdentifier(id value) {
-    if (![value isKindOfClass:NSString.class]) return NO;
-    NSString *base=value;
-    NSRange hash=[base rangeOfString:@"#" options:NSBackwardsSearch];
-    if (hash.location!=NSNotFound) {
-        NSString *suffix=[base substringFromIndex:hash.location+1];
-        if (!suffix.length || [suffix rangeOfCharacterFromSet:NSCharacterSet.decimalDigitCharacterSet.invertedSet].location!=NSNotFound || suffix.longLongValue<2) return NO;
-        base=[base substringToIndex:hash.location];
-    }
-    return [base isEqualToString:@"com.apple.control-center.ConnectivityModule"] ||
-        [base isEqualToString:@"com.evgeniy558.controlcenter18.connectivity2"];
+    return [value isKindOfClass:NSString.class] && [value isEqualToString:C18FiveNativeModuleIdentifier()];
 }
 static inline NSString *C18ShapeGridClass(id value) {
     if ([value isKindOfClass:NSString.class] &&

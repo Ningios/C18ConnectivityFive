@@ -17,6 +17,8 @@ int main(void) {
         assert(p[i].x+p[i].side<=132 && p[i].y+p[i].side<=132);
     }
     assert(C18CalculatePositions(5,400,330,p)==4);
+    assert(C18CalculatePositions(4,132,132,p)==4);
+    assert(C18CalculatePositions(4,70,70,p)==0);
     assert(C18CalculatePositions(5,70,70,p)==0);
     assert(C18CalculatePositions(5,NAN,132,p)==0);
     assert(C18CalculatePositions(4,252,60,p)==7);

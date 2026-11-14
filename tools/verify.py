@@ -37,7 +37,7 @@ def verify(path):
     fields=dict(line.split(': ',1) for line in text.splitlines() if ': ' in line and not line[0].isspace())
     assert fields['Version']==VERSION and fields['Architecture']=='iphoneos-arm64e'
     assert fields['Maintainer']==fields['Author']=='Ning&evgeniy558'
-    allowed={SIM+'CCSIM',SIM+'Info.plist',PREFIX+'C18ConnectivityFive.dylib',PREFIX+'C18ConnectivityFive.plist',PREFIX+'C18DataSwitchGlyph.png'}|{SIM+Path(n).name for n in EXPECTED_RESOURCES if 'CCSIM.bundle' in n}|{'Library/ControlCenter/Bundles/CCSwitchDataModule.bundle/'+Path(n).name for n in EXPECTED_RESOURCES if 'CCSwitchDataModule.bundle' in n}
+    allowed={SIM+'CCSIM',SIM+'Info.plist',PREFIX+'C18ConnectivityFive.dylib',PREFIX+'C18ConnectivityFive.plist',PREFIX+'C18DataSwitchGlyph.png','Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle/ConnectivityFiveModule','Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle/Info.plist'}|{SIM+Path(n).name for n in EXPECTED_RESOURCES if 'CCSIM.bundle' in n}|{'Library/ControlCenter/Bundles/CCSwitchDataModule.bundle/'+Path(n).name for n in EXPECTED_RESOURCES if 'CCSwitchDataModule.bundle' in n}
     from description import DEPICTION,verify_description
     verify_description(control,new)
     allowed|={entry['target'] for entry in RECORDING_RESOURCES.values()}|{PREFS,DEPICTION}
@@ -58,6 +58,7 @@ def verify(path):
     assert not (unused&(allowed|localization_targets|removed|drafts)), 'Unused asset scope overlaps runtime'
     assert not (set(png_changes)&(allowed|localization_targets|removed|drafts)), 'PNG scope overlaps runtime overlays'
     directory_targets={p for n in localization_targets for p in ['/'.join(n.split('/')[:i]) for i in range(1,len(n.split('/')))] if p not in old}
+    directory_targets.add('Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle')
     shots={n for n in old if screenshot(n)}
     assert len(shots)==15 and sum(len(old[n][1] or b'') for n in shots)==1663235
     expected_power=dict(old);power_cleanup=remove_old_power(expected_power)
@@ -85,7 +86,7 @@ def verify(path):
                 assert oi.isfile() and ni.isfile() and entry_meta(old[name],False)==entry_meta(new[name],False),name
                 assert ni.size==len(nb) and nb==expected_static[name][1] and hashlib.sha256(nb).hexdigest()==jpeg_changes[name]['after_sha256'],name
             else:assert record(old[name])==record(new[name]),'Baseline entry changed: '+name
-    executables={MAIN,SIM+'CCSIM',PREFIX+'C18ConnectivityFive.dylib',PREFS}
+    executables={MAIN,SIM+'CCSIM',PREFIX+'C18ConnectivityFive.dylib',PREFS,'Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle/ConnectivityFiveModule'}
     for name in allowed|{MAIN}:
         if name not in new:continue
         info,content=new[name];expected_mode=0o755 if name in executables else 0o644
@@ -109,8 +110,10 @@ def verify(path):
     assert simInfo['CFBundleIdentifier']=='netskao.ccsim' and simInfo['NSPrincipalClass']=='CCSIM'
     assert simInfo['CFBundleShortVersionString']==VERSION and simInfo['CFBundleVersion']==BUNDLE_VERSION
     strict_integrity={}
-    for label,name in [('main',MAIN),('companion',PREFIX+'C18ConnectivityFive.dylib'),('ccsim',SIM+'CCSIM')]:
+    for label,name in [('main',MAIN),('companion',PREFIX+'C18ConnectivityFive.dylib'),('ccsim',SIM+'CCSIM'),('independent', 'Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle/ConnectivityFiveModule')]:
         strict_integrity[label]={hex(sub):signature_check(slice_data) for sub,slice_data in checked_slices(new[name][1]).items()}
+    independent_info=plistlib.loads(new['Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle/Info.plist'][1]);assert independent_info['CFBundleIdentifier']=='com.ning.c18connectivityfive' and independent_info['NSPrincipalClass']=='C18ConnectivityFiveModule' and independent_info['CFBundleExecutable']=='ConnectivityFiveModule'
+    assert new['Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle/ConnectivityFiveModule'][1]==Path('build/ConnectivityFiveModule').read_bytes()
     assert new['usr/local/bin/CCSIMTool'][1]==old['usr/local/bin/CCSIMTool'][1]
     banned=('UIAlertController','UIAlertAction','UIAlertView','UIActionSheet','presentViewController:animated:completion:','onSelected','setSelected:')
     for name in banned:assert name.encode() not in sim,'Old SIM presentation entry retained: '+name

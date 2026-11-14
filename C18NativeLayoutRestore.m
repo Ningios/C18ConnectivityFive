@@ -1,11 +1,12 @@
 #import "C18Five.h"
 #import "C18RemovedModules.h"
 #import "C18ConnectivityShape.h"
+#import "C18HookRuntime.h"
 #import <string.h>
 
 extern void MSHookMessageEx(Class,SEL,IMP,IMP *);
 static void (*gNativeLoad)(id,SEL,id);
-static BOOL gNativeRestoreHooked,gNativeRestoreRetry;
+static BOOL gNativeRestoreHooked,gNativeRestoreRetry,gNativeReloadPending;
 static NSUInteger gNativeRestoreAttempts;
 
 static NSSet<NSString *> *C18NativeIdentifiers(NSDictionary *state) {
@@ -90,7 +91,7 @@ static id C18NativeWithoutPromos(id input) {
 // Passive serialized-state normalization: no singleton reload or startup scan.
 static id C18NativeConnectivityShapes(id input) {
     if (![input isKindOfClass:NSDictionary.class] || ![input[@"iconLists"] isKindOfClass:NSArray.class]) return input;
-    NSInteger mode=0; C18FiveRead(&mode,NULL); if (mode!=5) return input;
+    NSInteger mode=0; C18FiveRead(&mode,NULL); if (mode!=4 && mode!=5) return input;
     BOOL changed=NO; NSMutableArray *pages=[NSMutableArray array];
     for (id page in input[@"iconLists"]) {
         if (![page isKindOfClass:NSArray.class]) return input;
@@ -98,7 +99,7 @@ static id C18NativeConnectivityShapes(id input) {
         for (id entry in page) {
             if (![entry isKindOfClass:NSDictionary.class]) return input;
             if (C18ShapeIdentifier(entry[@"id"])) {
-                id old=entry[@"gridSize"], normalized=C18ShapeGridClass(old);
+                id old=entry[@"gridSize"], normalized=mode==4?@"CCUIIconGridSizeClassMedium":C18ShapeGridClass(old);
                 if (![normalized isEqual:old]) {
                     NSMutableDictionary *copy=[entry mutableCopy];copy[@"gridSize"]=normalized;
                     [entries addObject:[copy copy]];changed=YES;continue;
@@ -113,9 +114,21 @@ static id C18NativeConnectivityShapes(id input) {
 }
 
 static void C18NativeLoad(id state,SEL cmd,id input) {
-    input=C18NativeConnectivityShapes(C18NativeWithoutPromos(input));
+    id cleaned=C18NativeWithoutPromos(input);
+    input=C18NativeConnectivityShapes(cleaned);
     if (![input isKindOfClass:NSDictionary.class] || !input[@"C18FiveColumnGridVersion"]) {
-        gNativeLoad(state,cmd,input); return;
+        gNativeLoad(state,cmd,input);
+        if (input!=cleaned) {
+            NSDictionary *expected=input;
+            dispatch_async(dispatch_get_main_queue(),^{
+                id current=C18FiveObject(state,NSSelectorFromString(@"_serialize"));
+                if (![current isKindOfClass:NSDictionary.class] ||
+                    ![current[@"iconLists"] isEqual:expected[@"iconLists"]] ||
+                    ![C18NativeIdentifiers(current) isEqualToSet:C18NativeIdentifiers(expected)]) return;
+                C18FiveVoid(state,NSSelectorFromString(@"_save"));
+            });
+        }
+        return;
     }
     NSUserDefaults *journal=[[NSUserDefaults alloc] initWithSuiteName:@"com.cc18.fivecolumn.migration"];
     NSDictionary *backup=C18NativeConnectivityShapes(C18NativeWithoutPromos([journal dictionaryForKey:@"OriginalStateBeforeV2"]));
@@ -147,6 +160,20 @@ static BOOL C18NativeRegisterLoad(void) {
     MSHookMessageEx(cls,load,(IMP)C18NativeLoad,(IMP *)&gNativeLoad);
     return YES;
 }
+void C18NativeLayoutRestoreRequestReload(void) {
+    if (!NSThread.isMainThread) { dispatch_async(dispatch_get_main_queue(),^{ C18NativeLayoutRestoreRequestReload(); }); return; }
+    id shell=C18FiveLiveShell();
+    if (!shell || !C18FiveIsPresented()) { gNativeReloadPending=YES; return; }
+    gNativeReloadPending=NO;
+    // The sheet has closed and the existing Shell is live. Refresh its native
+    // model once so the independently scoped size change reaches reloadModules.
+    Class cls=objc_getClass("C18IconState");
+    id state=cls?C18FiveObject((id)cls,NSSelectorFromString(@"shared")):nil;
+    if (state) C18FiveVoid(state,NSSelectorFromString(@"reloadFromDisk"));
+    C18FiveVoid(shell,NSSelectorFromString(@"reloadModules"));
+    C18FiveVoid(shell,NSSelectorFromString(@"layout"));
+}
+BOOL C18NativeLayoutRestoreHasPendingReload(void) { return gNativeReloadPending; }
 void C18NativeLayoutRestoreInstall(void) {
     if (!NSThread.isMainThread || gNativeRestoreHooked || C18NativeRegisterLoad()) return;
     // If the image is late, retry metadata lookup only. No singleton is sent a message.

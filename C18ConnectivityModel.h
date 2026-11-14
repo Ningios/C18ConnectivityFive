@@ -7,7 +7,7 @@ typedef struct { double x, y, side; bool primary; } C18Position;
 // Geometry is independent of the module identifier stored in each slot.
 static inline int C18CalculatePositions(int mode, double w, double h, C18Position out[7]) {
     if ((mode!=4 && mode!=5) || !out || !isfinite(w) || !isfinite(h)) return 0;
-    if (mode==5 && w<h*2.0) {
+    if (w<h*2.0) {
         if (w<120 || h<120 || h>w*2.0) return 0;
         double gap=round(fmin(w,h)*0.09), inset=14.0;
         double d=fmin((w-2*inset-gap)*0.5,(h-2*inset-gap)*0.5);

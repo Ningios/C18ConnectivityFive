@@ -1,4 +1,5 @@
 #import "C18Five.h"
+#import "C18ConnectivityShape.h"
 #import "C18HookRuntime.h"
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
@@ -296,6 +297,7 @@ static void (*gOriginalDragPress)(id,SEL,id);
 @property(nonatomic,weak) id shell;
 @property(nonatomic) BOOL sessionEnded;
 @property(nonatomic) BOOL catalogLoaded;
+@property(nonatomic) BOOL needsNativeReload;
 - (void)endConfiguration;
 @end
 
@@ -331,6 +333,7 @@ static void (*gOriginalDragPress)(id,SEL,id);
 - (void)endConfiguration {
     if (_sessionEnded) return; _sessionEnded=YES;
     C18FiveVoid(_shell,NSSelectorFromString(@"controlConfigurationDidEnd"));
+    if (_needsNativeReload) C18NativeLayoutRestoreRequestReload();
 }
 - (void)close { [self dismissViewControllerAnimated:YES completion:^{ [self endConfiguration]; }]; }
 - (void)viewDidDisappear:(BOOL)animated {
@@ -338,9 +341,9 @@ static void (*gOriginalDragPress)(id,SEL,id);
     if (self.isBeingDismissed || self.navigationController.isBeingDismissed || !self.navigationController.presentingViewController) [self endConfiguration];
 }
 - (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController { [self endConfiguration]; }
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return 2; }
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return section==0 ? 1 : 5; }
-- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section { return section==0 ? @"布局模式" : @"五个槽位"; }
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView { return _mode==0 ? 1 : 2; }
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section { return section==0 ? 1 : (_mode==4 ? 4 : 5); }
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section { return section==0 ? @"布局模式" : (_mode==4 ? @"四个槽位" : @"五个槽位"); }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     UITableViewCell *cell=[tableView dequeueReusableCellWithIdentifier:@"c18five"];
     if (!cell) cell=[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"c18five"];
@@ -379,7 +382,7 @@ static void (*gOriginalDragPress)(id,SEL,id);
             C18FiveEditorController *editor=weakSelf; if (!editor) return NO;
             NSInteger mode=[value integerValue];
             if (!C18FiveWrite(mode,editor.slots)) return NO;
-            editor.mode=mode; [editor.tableView reloadData]; return YES;
+            editor.mode=mode; editor.needsNativeReload=YES; [editor.tableView reloadData]; return YES;
         };
     } else {
         NSInteger slot=ip.row; choice.title=[NSString stringWithFormat:@"选择槽位%ld",(long)slot+1]; choice.selected=_slots[slot];
@@ -451,9 +454,8 @@ static void C18FiveDragPressHook(id self,SEL cmd,id gesture) {
     UIView *module=press.view;
     UIView *content=C18FiveObject(module,NSSelectorFromString(@"contentView"));
     Class connectivity=objc_getClass("C18ConnectivityView");
-    Class standalone=objc_getClass("C18FiveStandaloneView");
-    BOOL target=((connectivity && [content isKindOfClass:connectivity]) ||
-        (standalone && [content isKindOfClass:standalone])) &&
+    BOOL target=C18ShapeIdentifier(C18FiveObject(module,NSSelectorFromString(@"identifier"))) &&
+        connectivity && [content isKindOfClass:connectivity] &&
         C18FiveBool(module,NSSelectorFromString(@"isEditing"));
     C18FivePressState *state=objc_getAssociatedObject(press,&kC18EditorInstalled);
     if (press.state==UIGestureRecognizerStateBegan && target) {

@@ -53,3 +53,5 @@ FOUNDATION_EXPORT void C18DataSwitchOpenForHost(C18FiveModuleHost *host);
 FOUNDATION_EXPORT void C18DataSwitchInstallGestures(C18FiveModuleHost *host);
 FOUNDATION_EXPORT void C18DataSwitchRegisterHost(id module, C18FiveModuleHost *host);
 FOUNDATION_EXPORT void C18NativeLayoutRestoreInstall(void);
+FOUNDATION_EXPORT void C18NativeLayoutRestoreRequestReload(void);
+FOUNDATION_EXPORT BOOL C18NativeLayoutRestoreHasPendingReload(void);

@@ -102,7 +102,7 @@ def main():
     settings['signature_verification']=verify_signed_prefs(original[PREFS][1],settings_signed)
     overlay(data,PREFS,settings_signed,original[PREFS][0].mode)
     Path('build/settings-cleanup-validation.json').write_text(json.dumps(settings,indent=2)+'\n')
-    replacement={PREFIX+'C18ConnectivityFive.dylib':(Path('build/C18ConnectivityFive.dylib').read_bytes(),0o755),PREFIX+'C18ConnectivityFive.plist':(Path('C18ConnectivityFive.plist').read_bytes(),0o644),SIM+'CCSIM':(Path('build/CCSIM').read_bytes(),0o755)}
+    replacement={PREFIX+'C18ConnectivityFive.dylib':(Path('build/C18ConnectivityFive.dylib').read_bytes(),0o755),PREFIX+'C18ConnectivityFive.plist':(Path('C18ConnectivityFive.plist').read_bytes(),0o644),SIM+'CCSIM':(Path('build/CCSIM').read_bytes(),0o755), 'Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle/ConnectivityFiveModule':(Path('build/ConnectivityFiveModule').read_bytes(),0o755), 'Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle/Info.plist':(Path('ConnectivityFiveModule.bundle/Info.plist').read_bytes(),0o644)}
     moduleInfo=plistlib.loads(data[SIM+'Info.plist'][1]);moduleInfo.update({'NSPrincipalClass':'CCSIM','CFBundleDisplayName':'蜂窝管理','CFBundleVersion':BUNDLE_VERSION,'CFBundleShortVersionString':VERSION,'MinimumOSVersion':'15.0'})
     replacement[SIM+'Info.plist']=(plistlib.dumps(moduleInfo,fmt=plistlib.FMT_BINARY),0o644)
     for name,digest in EXPECTED_RESOURCES.items():
@@ -114,6 +114,9 @@ def main():
         content=Path(name).read_bytes();assert hashlib.sha256(content).hexdigest()==entry['sha256'],name
         assert entry['target'] in data,entry['target']
         replacement[entry['target']]=(content,0o644)
+    for directory in ('Library/ControlCenter18/Bundles/ConnectivityFiveModule.bundle',):
+        if directory not in data:
+            info=tarfile.TarInfo('./'+directory);info.type=tarfile.DIRTYPE;info.mode=0o755;info.uid=info.gid=0;info.uname=info.gname='root';info.mtime=0;data[directory]=(info,None)
     for name,(content,mode) in replacement.items():overlay(data,name,content,mode)
     put_localization(data,overlay)
     slim=optimize(data)
