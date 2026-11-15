@@ -9,6 +9,10 @@
 #import <stdlib.h>
 #import <string.h>
 #import <unistd.h>
+#import <signal.h>
+#import <fcntl.h>
+#import <sys/stat.h>
+#import <sys/wait.h>
 
 extern char **environ;
 extern void MSHookMessageEx(Class,SEL,IMP,IMP *);
@@ -52,25 +56,112 @@ static void (*gC18PowerOriginal)(id,SEL);
 }
 @end
 
-typedef struct { int error; } C18PowerRunContext;
-static int C18PowerSpawn(const char *logical,const char *const *arguments,void *context) {
-    C18PowerRunContext *result=context;Dl_info image={0};char root[PATH_MAX],physical[PATH_MAX],resolved[PATH_MAX];
-    const char *imagePath=NULL;
+static void C18PowerLog(NSString *message) {
+    NSLog(@"[C18Power] %@",message);
+    NSString *line=[NSString stringWithFormat:@"%@ %@\n",[NSDate date],message];
+    NSData *bytes=[line dataUsingEncoding:NSUTF8StringEncoding];
+    int fd=open("/var/mobile/Library/Logs/C18PowerActions.log",O_WRONLY|O_CREAT|O_APPEND|O_CLOEXEC|O_NOFOLLOW,0600);
+    if (fd>=0) { (void)write(fd,bytes.bytes,bytes.length);close(fd); }
+}
+static void C18PowerFailure(UIView *anchor,NSString *message) {
+    if (!NSThread.isMainThread) {dispatch_async(dispatch_get_main_queue(),^{C18PowerFailure(anchor,message);});return;}
+    C18PowerLog(message);
+    UIWindow *window=anchor.window;
+    if (!window) for (UIScene *scene in UIApplication.sharedApplication.connectedScenes) {
+        if (![scene isKindOfClass:UIWindowScene.class]) continue;
+        for (UIWindow *candidate in ((UIWindowScene *)scene).windows) if (candidate.isKeyWindow) {window=candidate;break;}
+        if (window) break;
+    }
+    if (!window) return;
+    UILabel *label=[UILabel new];label.text=message;label.numberOfLines=0;label.textAlignment=NSTextAlignmentCenter;
+    label.textColor=UIColor.whiteColor;label.backgroundColor=[UIColor.blackColor colorWithAlphaComponent:0.84];
+    label.font=[UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];label.layer.cornerRadius=18;label.clipsToBounds=YES;
+    CGFloat width=MIN(340,CGRectGetWidth(window.bounds)-36);
+    label.frame=CGRectMake((CGRectGetWidth(window.bounds)-width)/2,MAX(60,window.safeAreaInsets.top+24),width,88);
+    [window addSubview:label];UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification,message);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW,5*NSEC_PER_SEC),dispatch_get_main_queue(),^{[label removeFromSuperview];});
+}
+static NSString *C18PowerHelperPath(void) {
+    // Use the official RootHide API first; dladdr is only a compatibility route.
+    typedef const char *(*C18JBRoot)(const char *);
+    static C18JBRoot convert;static void *library;static dispatch_once_t once;
+    dispatch_once(&once,^{
+        convert=(C18JBRoot)dlsym(RTLD_DEFAULT,"jbroot");
+        if (!convert) {
+            library=dlopen("@loader_path/.jbroot/usr/lib/libroothide.dylib",RTLD_NOW|RTLD_LOCAL);
+            if (library) convert=(C18JBRoot)dlsym(library,"jbroot");
+        }
+    });
+    const char *logical="/usr/libexec/C18PowerHelper";
+    if (convert) {const char *path=convert(logical);if (path && path[0]=='/' && access(path,F_OK)==0) return [NSString stringWithUTF8String:path];}
+    Dl_info image={0};char physical[PATH_MAX],root[PATH_MAX],path[PATH_MAX];
     if (dladdr((const void *)&kC18PowerMenu,&image) && image.dli_fname) {
-        imagePath=realpath(image.dli_fname,physical) ?: image.dli_fname;
+        const char *name=realpath(image.dli_fname,physical) ?: image.dli_fname;
+        if (C18PowerInstallRoot(name,root,sizeof(root)) && C18PowerResolveHelper(root,path,sizeof(path)) && access(path,F_OK)==0)
+            return [NSString stringWithUTF8String:path];
+        // RootHide's installer maintains this link beside the loaded library.
+        NSString *link=[[[NSString stringWithUTF8String:image.dli_fname] stringByDeletingLastPathComponent] stringByAppendingPathComponent:@".jbroot/usr/libexec/C18PowerHelper"];
+        if (realpath(link.fileSystemRepresentation,path)) return [NSString stringWithUTF8String:path];
     }
-    if (!logical || !arguments || !imagePath || !C18PowerInstallRoot(imagePath,root,sizeof(root)) ||
-        !C18PowerResolvePath(root,logical,resolved,sizeof(resolved))) {
-        if (result) result->error=ENOENT;
-        return 0;
+    return @"/var/jb/usr/libexec/C18PowerHelper";
+}
+static void C18PowerUserspaceRun(UIView *anchor) {
+    NSString *path=C18PowerHelperPath();
+    dispatch_async(dispatch_get_global_queue(QOS_CLASS_USER_INITIATED,0),^{
+        struct stat info={0};const char *file=path.fileSystemRepresentation;
+        if (stat(file,&info)!=0) {C18PowerFailure(anchor,[NSString stringWithFormat:@"找不到电源执行器：%s",strerror(errno)]);return;}
+        if (!S_ISREG(info.st_mode) || info.st_uid!=0 || !(info.st_mode&S_ISUID) || (info.st_mode&0022)) {
+            C18PowerFailure(anchor,@"电源执行器安装权限不正确（需要 root / 4755）");return;
+        }
+        int descriptors[2];if (pipe(descriptors)!=0) {C18PowerFailure(anchor,@"无法读取电源执行结果");return;}
+        fcntl(descriptors[0],F_SETFD,FD_CLOEXEC);fcntl(descriptors[1],F_SETFD,FD_CLOEXEC);
+        posix_spawn_file_actions_t actions;int error=posix_spawn_file_actions_init(&actions);
+        if (!error) {
+            error=posix_spawn_file_actions_adddup2(&actions,descriptors[1],STDOUT_FILENO);
+            if (!error) error=posix_spawn_file_actions_adddup2(&actions,descriptors[1],STDERR_FILENO);
+            if (!error) error=posix_spawn_file_actions_addclose(&actions,descriptors[0]);
+            if (!error) error=posix_spawn_file_actions_addclose(&actions,descriptors[1]);
+            pid_t pid=0;char *argv[]={(char *)file,"--userspace",NULL};
+            if (!error) error=posix_spawn(&pid,file,&actions,NULL,argv,environ);
+            posix_spawn_file_actions_destroy(&actions);close(descriptors[1]);
+            if (!error) {
+                C18PowerLog([NSString stringWithFormat:@"helper spawned pid=%d path=%@",(int)pid,path]);
+                NSMutableData *output=[NSMutableData data];char buffer[512];ssize_t size;
+                while ((size=read(descriptors[0],buffer,sizeof(buffer)))!=0) {
+                    if (size<0) {if (errno==EINTR)continue;break;}
+                    if (output.length<4096) [output appendBytes:buffer length:MIN((NSUInteger)size,4096-output.length)];
+                }
+                close(descriptors[0]);int status=0;pid_t waited;
+                do {waited=waitpid(pid,&status,0);} while (waited<0 && errno==EINTR);
+                NSString *detail=[[NSString alloc] initWithData:output encoding:NSUTF8StringEncoding] ?: @"";
+                C18PowerLog([NSString stringWithFormat:@"helper wait=%d status=%d output=%@",(int)waited,status,detail]);
+                if (waited<0 || !WIFEXITED(status) || WEXITSTATUS(status)!=0)
+                    C18PowerFailure(anchor,[NSString stringWithFormat:@"用户空间重启失败（状态 %d）\n%@",status,detail]);
+                return;
+            }
+        } else close(descriptors[1]);
+        close(descriptors[0]);C18PowerFailure(anchor,[NSString stringWithFormat:@"电源执行器启动失败：%s",strerror(error)]);
+    });
+}
+static void C18PowerPerform(C18PowerOperation operation,UIView *anchor) {
+    C18PowerLog([NSString stringWithFormat:@"selected operation=%d uid=%u euid=%u",operation,(unsigned)getuid(),(unsigned)geteuid()]);
+    if (strcmp(getprogname(),"SpringBoard") || ![NSBundle.mainBundle.bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
+        C18PowerFailure(anchor,@"电源操作只能由 SpringBoard 执行");return;
     }
-    if (access(resolved,X_OK)!=0) {if (result) result->error=errno;return 0;}
-    char *argv[4]={(char *)resolved,NULL,NULL,NULL};size_t count=0;
-    while(arguments[count]) {if (count>=2){if(result)result->error=E2BIG;return 0;}argv[count+1]=(char *)arguments[count];count++;}
-    pid_t pid=0;int error=posix_spawn(&pid,resolved,NULL,NULL,argv,environ);
-    if (result) result->error=error;
-    NSLog(@"[C18Power] spawn operation path=%s error=%d pid=%d",resolved,error,(int)pid);
-    return error==0;
+    if (operation==C18PowerRespring) {
+        if (kill(getpid(),SIGKILL)!=0) C18PowerFailure(anchor,[NSString stringWithFormat:@"注销失败：%s",strerror(errno)]);
+        return;
+    }
+    if (operation==C18PowerUserspace) {C18PowerUserspaceRun(anchor);return;}
+    if (operation!=C18PowerShutdown && operation!=C18PowerReboot) {C18PowerFailure(anchor,@"未知电源操作");return;}
+    Class cls=objc_getClass("FBSystemService");SEL shared=NSSelectorFromString(@"sharedInstance"),shutdown=NSSelectorFromString(@"shutdownAndReboot:");
+    if (!C18HookSignatureMatches(class_getClassMethod(cls,shared),"@",@[])) {C18PowerFailure(anchor,@"系统电源服务不可用");return;}
+    @try {
+        id service=((id(*)(id,SEL))objc_msgSend)(cls,shared);
+        if (!service || !C18HookCanInstall(object_getClass(service),shutdown,"v",@[@"B"])) {C18PowerFailure(anchor,@"系统电源接口签名不匹配");return;}
+        C18PowerLog([NSString stringWithFormat:@"FBSystemService shutdownAndReboot=%d",operation==C18PowerReboot]);
+        ((void(*)(id,SEL,BOOL))objc_msgSend)(service,shutdown,operation==C18PowerReboot);
+    } @catch (NSException *error) {C18PowerFailure(anchor,[NSString stringWithFormat:@"系统电源调用失败：%@",error.reason]);}
 }
 static UIView *C18PowerAnchor(id owner) {
     Ivar ivar=class_getInstanceVariable(object_getClass(owner),"_power");
@@ -100,15 +191,14 @@ static void C18PowerTriggered(id self,SEL cmd) {
     for (NSUInteger index=0;index<titles.count;index++) {
         C18PowerOperation operation=(C18PowerOperation)index;
         UIAction *item=[UIAction actionWithTitle:titles[index] image:nil identifier:nil handler:^(__kindof UIAction *action){
-            (void)action;UIView *source=weakAnchor;
-            // UIKit has already accepted the selection. Menu dismissal may
-            // detach its anchor before this callback; that is not cancellation.
-            if (selection.consumed || !NSThread.isMainThread) return;
-            selection.consumed=YES;C18PowerRunContext run={0};
-            if (!C18PowerExecute(operation,C18PowerSpawn,&run)) {
-                NSString *message=[NSString stringWithFormat:@"电源操作未能启动（错误 %d）",run.error];
-                source.accessibilityValue=message;UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification,message);
-            }
+            (void)action;
+            // UIKit has accepted the selection. Dismissal is not cancellation.
+            // Serialize selection on main instead of dropping off-main delivery.
+            void (^perform)(void)=^{
+                if (selection.consumed) return;
+                selection.consumed=YES;C18PowerPerform(operation,weakAnchor);
+            };
+            if (NSThread.isMainThread) perform();else dispatch_async(dispatch_get_main_queue(),perform);
         }];
         if (operation==C18PowerShutdown)item.attributes=UIMenuElementAttributesDestructive;
         [items addObject:item];

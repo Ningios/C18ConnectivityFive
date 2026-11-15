@@ -76,6 +76,29 @@ def replace_content(entries, name, content):
     entries[name] = (info, content)
 
 
+def install_power_helper(entries, prefix, content):
+    """Use explicit tar ownership; the build runner's user must not leak in."""
+    for folder in ('usr', 'usr/libexec'):
+        name = prefix + folder
+        if name not in entries:
+            info = tarfile.TarInfo(name)
+            info.type = tarfile.DIRTYPE
+            info.mode = 0o755
+            info.uid = info.gid = 0
+            info.uname, info.gname = 'root', 'wheel'
+            entries[name] = (info, None)
+        assert entries[name][0].isdir(), name
+    name = prefix + 'usr/libexec/C18PowerHelper'
+    assert name not in entries, 'Unexpected preexisting power helper'
+    info = tarfile.TarInfo(name)
+    info.mode = 0o4755
+    info.uid = info.gid = 0
+    info.uname, info.gname = 'root', 'wheel'
+    info.size = len(content)
+    entries[name] = (info, content)
+    return name
+
+
 def remove_prefs_group_localizations(entries, prefix):
     prefs = prefix + 'Library/PreferenceBundles/ControlCenter18Prefs.bundle/'
     changed = set()
@@ -163,6 +186,9 @@ def main():
         for name in old_power:
             del data[name]
         replace_content(data, target, companion)
+        before_helper = set(data)
+        helper = install_power_helper(data, prefix, (ROOT / 'build/C18PowerHelper').read_bytes())
+        helper_added = set(data) - before_helper
         cores = set()
         core_reports = __import__('json').loads((ROOT / 'build/core-signing.json').read_text())
         for stem in ('ControlCenter18', 'ControlCenter18Modules'):
@@ -181,8 +207,11 @@ def main():
         assert record['macos_codesign_strict_all_architectures'] is True
         replace_content(data, prefs, signed_prefs)
         cleaned_strings = remove_prefs_group_localizations(data, prefix)
-        assert data.keys() == original.keys() - slim_removed - old_power
-        assert all(data[name] == original[name] for name in data if name not in ({target, prefs} | cores | cleaned_strings)), "Overlay escaped reviewed scope"
+        assert data.keys() == (original.keys() - slim_removed - old_power) | helper_added
+        assert all(data[name] == original[name] for name in data if name not in ({target, prefs} | cores | cleaned_strings | helper_added)), "Overlay escaped reviewed scope"
+        helper_info, helper_bytes = data[helper]
+        assert helper_info.uid == helper_info.gid == 0 and helper_info.mode == 0o4755
+        assert helper_bytes == (ROOT / 'build/C18PowerHelper').read_bytes()
         # These are the original two image families, not substitute artwork.
         for filename in ('icon.png', 'icon@2x.png', 'icon@3x.png',
                          'header-icon.png', 'header-icon@2x.png', 'header-icon@3x.png'):

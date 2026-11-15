@@ -37,6 +37,15 @@ jobs:
           done
           xcrun lipo -create -output build/C18ConnectivityFive.dylib build/C18ConnectivityFive-arm64.dylib build/C18ConnectivityFive-arm64e.dylib
           codesign --force --sign - --timestamp=none build/C18ConnectivityFive.dylib
+          for ARCH in arm64 arm64e; do
+            xcrun --sdk iphoneos clang -std=c11 -O2 -Wall -Wextra -Werror \
+              -isysroot "$SDK" -target "${ARCH}-apple-ios15.0" \
+              C18PowerHelper.c -o "build/C18PowerHelper-${ARCH}"
+            xcrun strip -x "build/C18PowerHelper-${ARCH}"
+          done
+          xcrun lipo -create -output build/C18PowerHelper build/C18PowerHelper-arm64 build/C18PowerHelper-arm64e
+          codesign --force --sign - --timestamp=none --entitlements Resources/C18PowerHelper.entitlements build/C18PowerHelper
+          codesign --verify --strict --all-architectures build/C18PowerHelper
       - name: Remove three settings rows and sign Prefs
         run: python3 tools/prepare_prefs.py
       - name: Renew pinned core signature requirements
