@@ -1,0 +1,11 @@
+# CC18 beta6 power executable lookup repair
+
+The replacement power backend inherited the original provider's absolute `/usr/bin` and `/var/jb` command paths. On the inspected RootHide device, `/usr/bin` contains none of launchctl, killall, sbreload or ldrestart, and `/var/jb` does not exist. Those executables are present below the current randomized jailbreak root. All five operations use this shared lookup, so a failed executable precheck prevents their spawn calls.
+
+The removed original power dylib had a `.roothidepatch` link to AutoPatches; the replacement companion has no corresponding marker. This proves a packaging difference, not which APIs AutoPatches actually intercepted. The repair therefore explicitly resolves the companion's real installation path instead of relying on automatic conversion.
+
+`C18PowerPaths.h` checks the exact companion filename and installation suffix, derives its root and maps only the original provider's command names. The executable precheck and posix_spawn use the same physical path. The command order, arguments and NULL environment remain unchanged. The menu, selection guards, safe-mode marker, unrelated modules and settings transforms are preserved. Diagnostics record selection rejection, path errors and spawn return codes.
+
+Local validation uses both arm64 and arm64e iOS SDK syntax checks and the production resolver/spawn function with mocked OS calls. The path regression covers rootful, rootless and randomized roots; all five operations; invalid paths, buffers and arguments; access, dladdr, realpath and spawn failures. It never executes power commands. The manual CI runs this test, builds both slices, signs the companion and verifies four primary programs extracted from each final deb using macOS codesign --verify --strict --all-architectures.
+
+This repair does not prove device execution. Successful spawn alone does not establish tool exit success or permission to complete a reboot. The original safe-mode implementation writes `.C18SafeMode` then requests a respring; its consumption by the jailbreak framework is not established here. No automatic installation, injection, respring or source publication is part of this repair. Version stays 3.0-beta6 per the user's existing requirement; distinguish artifacts by commit, run and SHA256.
