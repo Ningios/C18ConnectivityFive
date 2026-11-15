@@ -444,6 +444,21 @@ static void C18FivePresentEditor(id shell,UIView *view) {
 @property(nonatomic,weak) UIView *module;
 @end
 @implementation C18FivePressState @end
+// The original connection cards remain an entry to the settings sheet only.
+// Layout, resizing, and rendering continue to recognize the new module ID alone.
+static BOOL C18FiveEditorEntryIdentifier(id value) {
+    if (C18ShapeIdentifier(value)) return YES;
+    if (![value isKindOfClass:NSString.class]) return NO;
+    NSString *base=value;
+    NSRange hash=[base rangeOfString:@"#" options:NSBackwardsSearch];
+    if (hash.location!=NSNotFound) {
+        NSString *suffix=[base substringFromIndex:hash.location+1];
+        if (!suffix.length || [suffix rangeOfCharacterFromSet:NSCharacterSet.decimalDigitCharacterSet.invertedSet].location!=NSNotFound || suffix.longLongValue<2) return NO;
+        base=[base substringToIndex:hash.location];
+    }
+    return [base isEqualToString:@"com.apple.control-center.ConnectivityModule"] ||
+        [base isEqualToString:@"com.evgeniy558.controlcenter18.connectivity2"];
+}
 static void C18FiveDragPressHook(id self,SEL cmd,id gesture) {
     if (![gesture isKindOfClass:UIGestureRecognizer.class]) {
         if (gOriginalDragPress) gOriginalDragPress(self,cmd,gesture);
@@ -454,7 +469,7 @@ static void C18FiveDragPressHook(id self,SEL cmd,id gesture) {
     UIView *module=press.view;
     UIView *content=C18FiveObject(module,NSSelectorFromString(@"contentView"));
     Class connectivity=objc_getClass("C18ConnectivityView");
-    BOOL target=C18ShapeIdentifier(C18FiveObject(module,NSSelectorFromString(@"identifier"))) &&
+    BOOL target=C18FiveEditorEntryIdentifier(C18FiveObject(module,NSSelectorFromString(@"identifier"))) &&
         connectivity && [content isKindOfClass:connectivity] &&
         C18FiveBool(module,NSSelectorFromString(@"isEditing"));
     C18FivePressState *state=objc_getAssociatedObject(press,&kC18EditorInstalled);

@@ -13,7 +13,12 @@ assert 'if (C18ShapeIdentifier(identifier)) return YES;' in tweak
 editor=read('C18FiveEditor.m')
 assert 'return _mode==0 ? 1 : 2;' in editor
 assert 'return section==0 ? 1 : (_mode==4 ? 4 : 5);' in editor
-assert 'BOOL target=C18ShapeIdentifier(C18FiveObject(module,NSSelectorFromString(@"identifier")))' in editor
+entry=editor.split('static BOOL C18FiveEditorEntryIdentifier(id value) {',1)[1].split('static void C18FiveDragPressHook',1)[0]
+assert 'com.apple.control-center.ConnectivityModule' in entry
+assert 'com.evgeniy558.controlcenter18.connectivity2' in entry
+assert 'C18ShapeIdentifier(value)' in entry
+assert 'BOOL target=C18FiveEditorEntryIdentifier(C18FiveObject(module,NSSelectorFromString(@"identifier")))' in editor
+assert 'C18FiveEditorEntryIdentifier' not in tweak
 state=read('C18NativeLayoutRestore.m')
 assert 'C18NativeEnsureIndependentModule' not in state
 assert 'if (C18ShapeIdentifier(entry[@"id"]))' in state
