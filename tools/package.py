@@ -17,6 +17,14 @@ BASELINES = (
 )
 XZ_FILTERS = [{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME,
                "dict_size": 32 * 1024 * 1024}]
+SLIM_REMOVE_SUFFIXES = (".png", ".jpg", ".jpeg")
+
+
+def slim_remove(name):
+    return ("/Library/Application Support/ControlCenter18/Settings18/" in name or
+            "/Library/Application Support/ControlCenter18/AVControls18.bundle/Mic Modes Visualizer.ca/" in name or
+            "/Library/PreferenceBundles/ControlCenter18Prefs.bundle/" in name and
+            name.lower().endswith(SLIM_REMOVE_SUFFIXES))
 
 
 def deb_members(blob):
@@ -110,6 +118,10 @@ def main():
         assert len(control_names) == len(data_names) == 1
         control, data = archive(members[control_names[0]]), archive(members[data_names[0]])
         original = dict(data)
+        slim_removed = {name for name in data if slim_remove(name)}
+        for name in slim_removed:
+            del data[name]
+        assert slim_removed, "Slimming rule removed nothing"
         folder = prefix + "Library/MobileSubstrate/DynamicLibraries/"
         target = folder + "C18ConnectivityFive.dylib"
         removed = {folder + "C18PowerMenu.dylib", folder + "C18PowerMenu.plist"}
@@ -119,7 +131,7 @@ def main():
         for name in removed:
             del data[name]
         replace_content(data, target, companion)
-        assert data.keys() == original.keys() - removed
+        assert data.keys() == original.keys() - removed - slim_removed
         assert all(data[name] == original[name] for name in data if name != target), "Overlay escaped companion scope"
 
         # Compute this only after all payload changes; preserve every other control byte.

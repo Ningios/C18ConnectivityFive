@@ -27,6 +27,10 @@ jobs:
               -Wl,-undefined,dynamic_lookup -Wl,-install_name,@loader_path/C18ConnectivityFive.dylib \
               "${SRC[@]}" -o "build/C18ConnectivityFive-${ARCH}.dylib"
           done
+          # Remove only local linker symbols; keep ObjC metadata and undefined hooks.
+          for ARCH in arm64 arm64e; do
+            xcrun strip -x "build/C18ConnectivityFive-${ARCH}.dylib"
+          done
           xcrun lipo -create -output build/C18ConnectivityFive.dylib build/C18ConnectivityFive-arm64.dylib build/C18ConnectivityFive-arm64e.dylib
           codesign --force --sign - --timestamp=none build/C18ConnectivityFive.dylib
       - name: Package both user baselines
