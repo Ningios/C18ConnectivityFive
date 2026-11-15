@@ -16,7 +16,6 @@ static NSString *C18FiveChineseTitle(NSString *identifier, NSString *fallback, N
         @"com.apple.control-center.AirDropModule":@"隔空投送",
         @"com.apple.control-center.BluetoothModule":@"蓝牙",
         @"com.evgeniy558.controlcenter18.connectivity2":@"连接中心",
-        @"com.ning.c18connectivityfive":@"自定义五键连接",
         @"com.apple.shortcuts.OpenAppControl":@"打开 App",
         @"com.apple.WiFiKit.PersonalHotspotControl":@"个人热点",
         @"com.apple.shortcuts.ShortcutsControl":@"快捷指令",

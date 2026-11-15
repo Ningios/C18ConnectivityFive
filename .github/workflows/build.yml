@@ -32,10 +32,6 @@ jobs:
           python3 tools/strip_runtime.py build/CCSIM build/C18ConnectivityFive.dylib
           xcrun codesign --force --sign - --timestamp=none build/CCSIM
           xcrun codesign --force --sign - --timestamp=none build/C18ConnectivityFive.dylib
-          xcrun --sdk iphoneos clang -fobjc-arc -O2 -isysroot "$SDK" -target arm64-apple-ios15.0 -dynamiclib -I. -framework Foundation -framework CoreFoundation -Wl,-undefined,dynamic_lookup -Wl,-install_name,@rpath/ConnectivityFiveModule C18ConnectivityFiveModule.m -o build/ConnectivityFiveModule-arm64
-          xcrun --sdk iphoneos clang -fobjc-arc -O2 -isysroot "$SDK" -target arm64e-apple-ios15.0 -dynamiclib -I. -framework Foundation -framework CoreFoundation -Wl,-undefined,dynamic_lookup -Wl,-install_name,@rpath/ConnectivityFiveModule C18ConnectivityFiveModule.m -o build/ConnectivityFiveModule-arm64e
-          xcrun lipo -create -output build/ConnectivityFiveModule build/ConnectivityFiveModule-arm64 build/ConnectivityFiveModule-arm64e
-          xcrun codesign --force --sign - --timestamp=none build/ConnectivityFiveModule
       - name: Package and verify
         env:
           CC18_BASE_DEB: Vendor/baseline.deb
