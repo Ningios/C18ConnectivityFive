@@ -39,6 +39,8 @@ jobs:
           codesign --force --sign - --timestamp=none build/C18ConnectivityFive.dylib
       - name: Remove three settings rows and sign Prefs
         run: python3 tools/prepare_prefs.py
+      - name: Renew pinned core signature requirements
+        run: python3 tools/prepare_core.py
       - name: Package both user baselines
         run: python3 tools/package.py
       - name: Verify final package signatures and architectures

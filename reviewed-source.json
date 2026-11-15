@@ -3,7 +3,7 @@
   "baseline_arm64e_sha256": "483130e2bc6ee885845bb66b0b9e183aa66f4f54b6bb1a950c9935f0e473a7f5",
   "baseline_source_commit": "c64c467adb596bbe83e41911ecf6de1a8926257c",
   "sha256": {
-    ".github/workflows/build.yml": "4cc965ab53f75eb0e8c6a5a7d46448cb28ee923bc242626cef7173d629c29e38",
+    ".github/workflows/build.yml": "69ddd80ecd60607bbb6892d6c12712bbb23495184ab58abc88ba163513d3495d",
     "C18CarrierNames.m": "867fe5a86677090ec6819628e64cf3edfa44a8884a11e3b8e1bb5be7087945f3",
     "C18CellularRate.m": "6fd570469a3d97c0d007281f674d167b09abf645cfc17c858ad4aeb02c1d4f20",
     "C18ConnectivityFive.plist": "5607e236ec11e8703fd426a89232ebc41a27fe806356ed4930b15e12595f528b",
@@ -23,7 +23,8 @@
     "C18PowerBackend.h": "1a4ed0c77e007c2983fcd926147eb3b64242986b66203238264b75ce68ada479",
     "C18PowerMenu.m": "c43bd00a5c519662e03c3a940f4fa896632c97135f3d14f7e281876fc33f737b",
     "C18PowerPaths.h": "e786bff510aebbe809eea1bd9abcac34bac5aac033263782dcee9ab5bed348e8",
-    "POWER-FIX.md": "c88011748f380004eaef91bf0a8078e5d23d081a886c29d37cdc7dd0aa66ade6",
+    "POWER-FIX.md": "798a732d59beca0773a30b2418173230398335e239b7f915b7c6eb58e2e58ac2",
+    "tools/prepare_core.py": "f707d4bb50a38a09f86eac77c87bc565e36ad35b26bae4430b16d26eb42b5b3c",
     "tools/test_power_paths.py": "6bc956abe58009ab0e07a5b317a14a5682dc2b0c4b78f502bb81610537632f58",
     "tools/verify_delivery.py": "0481461599dd88c907a518618965bf06ae6609bae9f7841f6eb30fc496e21a92",
     "C18PressDriver.h": "72413b1b77cf8334d8cb7a98b1ed3dc75dd123053878f6502a744c07fe78b66b",
@@ -55,7 +56,7 @@
     "Vendor/baseline-arm64.deb": "5f2f16b17281d0d3cbf9eb2bd096a7021e176261023c21d9d8f892f9a3141cfb",
     "Vendor/baseline-arm64e.deb": "483130e2bc6ee885845bb66b0b9e183aa66f4f54b6bb1a950c9935f0e473a7f5",
     "tools/check_source.py": "bd439ee302214d0c46da93ae0acc774f76a509d8ab1bc2b553cc41deed0dfd0d",
-    "tools/package.py": "9cdd008ccacdbd7448272be2336fc6919af0c78e260246996f315a4448bc90b6",
+    "tools/package.py": "6ca48db1e95754e466250539fd413773caacd38be80f522f9c3aea794146f364",
     "tools/prefs_cleanup.py": "8b765e83d4cedbf3223ae99eb7a3542ae57eaf90fe37829a588a918fb5cd6198",
     "tools/prepare_prefs.py": "90fb1f1ed765c7b1a0f106da1b396654dec3ca668925427b71a5c0fea3550466",
     "tools/test_prefs.py": "e8ac2e281ac9b1d4e39bcd4a6475e046d1ca51e8457b38356b700cb6b31509bf"

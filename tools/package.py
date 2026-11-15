@@ -163,6 +163,16 @@ def main():
         for name in removed:
             del data[name]
         replace_content(data, target, companion)
+        cores = set()
+        core_reports = __import__('json').loads((ROOT / 'build/core-signing.json').read_text())
+        for stem in ('ControlCenter18', 'ControlCenter18Modules'):
+            core = folder + stem + '.dylib'
+            core_record = next(row for row in core_reports if row['arch'] == arch and row['stem'] == stem)
+            signed_core = (ROOT / 'build' / core_record['file']).read_bytes()
+            assert hashlib.sha256(signed_core).hexdigest() == core_record['signed_sha256']
+            assert core_record['runtime_sections_unchanged'] and core_record['macos_codesign_strict_all_architectures']
+            replace_content(data, core, signed_core)
+            cores.add(core)
         prefs = prefix + 'Library/PreferenceBundles/ControlCenter18Prefs.bundle/ControlCenter18Prefs'
         signed_prefs = (ROOT / f'build/Prefs-{arch}.dylib').read_bytes()
         report = __import__('json').loads((ROOT / 'build/prefs-cleanup.json').read_text())
@@ -172,7 +182,7 @@ def main():
         replace_content(data, prefs, signed_prefs)
         cleaned_strings = remove_prefs_group_localizations(data, prefix)
         assert data.keys() == original.keys() - removed - slim_removed
-        assert all(data[name] == original[name] for name in data if name not in ({target, prefs} | cleaned_strings)), "Overlay escaped reviewed scope"
+        assert all(data[name] == original[name] for name in data if name not in ({target, prefs} | cores | cleaned_strings)), "Overlay escaped reviewed scope"
         # These are the original two image families, not substitute artwork.
         for filename in ('icon.png', 'icon@2x.png', 'icon@3x.png',
                          'header-icon.png', 'header-icon@2x.png', 'header-icon@3x.png'):
