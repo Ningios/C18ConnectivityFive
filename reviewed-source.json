@@ -3,7 +3,7 @@
   "baseline_arm64e_sha256": "483130e2bc6ee885845bb66b0b9e183aa66f4f54b6bb1a950c9935f0e473a7f5",
   "baseline_source_commit": "c64c467adb596bbe83e41911ecf6de1a8926257c",
   "sha256": {
-    ".github/workflows/build.yml": "401ef3ac533d3700b7de21a25a1beb6db8818faa6bff3b990c439c67e6c5a629",
+    ".github/workflows/build.yml": "f3c49398ae30148a1b0aae92c012df53df991f26ef7131f2723cd3682a1248c4",
     "C18CarrierNames.m": "867fe5a86677090ec6819628e64cf3edfa44a8884a11e3b8e1bb5be7087945f3",
     "C18CellularRate.m": "6fd570469a3d97c0d007281f674d167b09abf645cfc17c858ad4aeb02c1d4f20",
     "C18ConnectivityFive.plist": "5607e236ec11e8703fd426a89232ebc41a27fe806356ed4930b15e12595f528b",
@@ -51,6 +51,9 @@
     "Vendor/baseline-arm64.deb": "5f2f16b17281d0d3cbf9eb2bd096a7021e176261023c21d9d8f892f9a3141cfb",
     "Vendor/baseline-arm64e.deb": "483130e2bc6ee885845bb66b0b9e183aa66f4f54b6bb1a950c9935f0e473a7f5",
     "tools/check_source.py": "bd439ee302214d0c46da93ae0acc774f76a509d8ab1bc2b553cc41deed0dfd0d",
-    "tools/package.py": "92067f823c94f412990357dd6baef1273a851ec2846d83f16a676efd23c02423"
+    "tools/package.py": "d989635fc267e4e1a44be8cb3e765fc7fcdcb01957f21b9be6fad0d1e47b9472",
+    "tools/prefs_cleanup.py": "8b765e83d4cedbf3223ae99eb7a3542ae57eaf90fe37829a588a918fb5cd6198",
+    "tools/prepare_prefs.py": "90fb1f1ed765c7b1a0f106da1b396654dec3ca668925427b71a5c0fea3550466",
+    "tools/test_prefs.py": "23e5e25df05f80d35e1119237ff27eb80ae0a75993f8d48bb32f78054876a1b1"
   }
 }

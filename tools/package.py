@@ -21,6 +21,14 @@ SLIM_REMOVE_SUFFIXES = (".png", ".jpg", ".jpeg")
 
 
 def slim_remove(name):
+    # Restore only the settings entry icon and the page header, at all scales.
+    prefs = "Library/PreferenceBundles/ControlCenter18Prefs.bundle/"
+    restored = {prefs + filename for filename in (
+        "icon.png", "icon@2x.png", "icon@3x.png",
+        "header-icon.png", "header-icon@2x.png", "header-icon@3x.png",
+    )}
+    if name.removeprefix("var/jb/") in restored:
+        return False
     # RootHide paths start at Library; rootless paths include var/jb/.
     return (("/Library/Application Support/ControlCenter18/Settings18/" in name or
              name.startswith("Library/Application Support/ControlCenter18/Settings18/")) or
@@ -135,8 +143,20 @@ def main():
         for name in removed:
             del data[name]
         replace_content(data, target, companion)
+        prefs = prefix + 'Library/PreferenceBundles/ControlCenter18Prefs.bundle/ControlCenter18Prefs'
+        signed_prefs = (ROOT / f'build/Prefs-{arch}.dylib').read_bytes()
+        report = __import__('json').loads((ROOT / 'build/prefs-cleanup.json').read_text())
+        record = next(r for r in report if r['arch'] == arch)
+        assert hashlib.sha256(signed_prefs).hexdigest() == record['signed_sha256']
+        assert record['macos_codesign_strict_all_architectures'] is True
+        replace_content(data, prefs, signed_prefs)
         assert data.keys() == original.keys() - removed - slim_removed
-        assert all(data[name] == original[name] for name in data if name != target), "Overlay escaped companion scope"
+        assert all(data[name] == original[name] for name in data if name not in (target, prefs)), "Overlay escaped reviewed scope"
+        # These are the original two image families, not substitute artwork.
+        for filename in ('icon.png', 'icon@2x.png', 'icon@3x.png',
+                         'header-icon.png', 'header-icon@2x.png', 'header-icon@3x.png'):
+            name = prefix + 'Library/PreferenceBundles/ControlCenter18Prefs.bundle/' + filename
+            assert data[name] == original[name]
 
         # Compute this only after all payload changes; preserve every other control byte.
         old_control = control["control"][1]
