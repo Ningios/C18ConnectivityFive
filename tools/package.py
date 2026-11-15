@@ -21,10 +21,14 @@ SLIM_REMOVE_SUFFIXES = (".png", ".jpg", ".jpeg")
 
 
 def slim_remove(name):
-    return ("/Library/Application Support/ControlCenter18/Settings18/" in name or
-            "/Library/Application Support/ControlCenter18/AVControls18.bundle/Mic Modes Visualizer.ca/" in name or
-            "/Library/PreferenceBundles/ControlCenter18Prefs.bundle/" in name and
-            name.lower().endswith(SLIM_REMOVE_SUFFIXES))
+    # RootHide paths start at Library; rootless paths include var/jb/.
+    return (("/Library/Application Support/ControlCenter18/Settings18/" in name or
+             name.startswith("Library/Application Support/ControlCenter18/Settings18/")) or
+            ("/Library/Application Support/ControlCenter18/AVControls18.bundle/Mic Modes Visualizer.ca/" in name or
+             name.startswith("Library/Application Support/ControlCenter18/AVControls18.bundle/Mic Modes Visualizer.ca/")) or
+            (("/Library/PreferenceBundles/ControlCenter18Prefs.bundle/" in name or
+              name.startswith("Library/PreferenceBundles/ControlCenter18Prefs.bundle/")) and
+             name.lower().endswith(SLIM_REMOVE_SUFFIXES)))
 
 
 def deb_members(blob):
