@@ -12,8 +12,8 @@ jobs:
         run: python3 tools/check_source.py
       - name: Check settings row removal and icons
         run: python3 tools/test_prefs.py
-      - name: Check original power provider and callback bridge
-        run: python3 tools/test_power_restore.py
+      - name: Check four-action backend and obsolete UI deletion
+        run: python3 tools/test_power_root.py
       - name: Compile and sign companion
         shell: bash
         run: |

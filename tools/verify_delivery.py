@@ -18,13 +18,12 @@ def verify():
             assert f'Architecture: iphoneos-{arch}'.encode() in metadata
             assert f'Version: {VERSION}'.encode() in metadata
             folder=prefix+'Library/MobileSubstrate/DynamicLibraries/'
-            power=folder+'C18PowerMenu.dylib';plist=folder+'C18PowerMenu.plist'
-            assert hashlib.sha256(data[power][1]).hexdigest()=='5490c2a7ea6ebe4e4d0c2f568dccae4a609f69d9a9f0d9805e70c2749be6699b'
-            assert hashlib.sha256(data[plist][1]).hexdigest()=='29bbe36650150dbedd2f466bb84abefadfb54eb0a5bddd1e6814d40c607618f8'
-            marker=folder+'C18PowerMenu.dylib.roothidepatch'
-            if arch=='arm64e':
-                assert data[marker][0].issym() and data[marker][0].linkname=='/usr/lib/DynamicPatches/AutoPatches.dylib'
-            else:assert marker not in data
+            assert not any(folder+n in data for n in ('C18PowerMenu.dylib','C18PowerMenu.plist','C18PowerMenu.dylib.roothidepatch'))
+            companion=data[folder+'C18ConnectivityFive.dylib'][1]
+            # DataSwitch still uses UIKit alerts; check only deleted power classes.
+            assert b'C18PowerRequest' not in companion and b'C18PowerPresenterHook' not in companion
+            assert b'C18PowerSafe' not in companion and b'.C18SafeMode' not in companion
+            assert '安全模式'.encode('utf-16le') not in companion
             names=[folder+n for n in ('ControlCenter18.dylib','ControlCenter18Modules.dylib','C18ConnectivityFive.dylib')]
             names.append(prefix+'Library/PreferenceBundles/ControlCenter18Prefs.bundle/ControlCenter18Prefs')
             programs=[]
