@@ -156,12 +156,11 @@ def main():
         assert slim_removed, "Slimming rule removed nothing"
         folder = prefix + "Library/MobileSubstrate/DynamicLibraries/"
         target = folder + "C18ConnectivityFive.dylib"
-        removed = {folder + "C18PowerMenu.dylib", folder + "C18PowerMenu.plist"}
+        old_power = {folder + "C18PowerMenu.dylib", folder + "C18PowerMenu.plist"}
         if arch == "arm64e":
-            removed.add(folder + "C18PowerMenu.dylib.roothidepatch")
-        assert target in data and removed <= data.keys(), "Missing baseline overlay paths"
-        for name in removed:
-            del data[name]
+            old_power.add(folder + "C18PowerMenu.dylib.roothidepatch")
+        assert target in data and old_power <= data.keys(), "Missing original power provider"
+        assert all(data[name] == original[name] for name in old_power), "Original power provider modified"
         replace_content(data, target, companion)
         cores = set()
         core_reports = __import__('json').loads((ROOT / 'build/core-signing.json').read_text())
@@ -181,7 +180,7 @@ def main():
         assert record['macos_codesign_strict_all_architectures'] is True
         replace_content(data, prefs, signed_prefs)
         cleaned_strings = remove_prefs_group_localizations(data, prefix)
-        assert data.keys() == original.keys() - removed - slim_removed
+        assert data.keys() == original.keys() - slim_removed
         assert all(data[name] == original[name] for name in data if name not in ({target, prefs} | cores | cleaned_strings)), "Overlay escaped reviewed scope"
         # These are the original two image families, not substitute artwork.
         for filename in ('icon.png', 'icon@2x.png', 'icon@3x.png',

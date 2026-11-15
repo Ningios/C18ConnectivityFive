@@ -18,7 +18,13 @@ def verify():
             assert f'Architecture: iphoneos-{arch}'.encode() in metadata
             assert f'Version: {VERSION}'.encode() in metadata
             folder=prefix+'Library/MobileSubstrate/DynamicLibraries/'
-            assert not any(folder+n in data for n in ('C18PowerMenu.dylib','C18PowerMenu.plist','C18PowerMenu.dylib.roothidepatch'))
+            power=folder+'C18PowerMenu.dylib';plist=folder+'C18PowerMenu.plist'
+            assert hashlib.sha256(data[power][1]).hexdigest()=='5490c2a7ea6ebe4e4d0c2f568dccae4a609f69d9a9f0d9805e70c2749be6699b'
+            assert hashlib.sha256(data[plist][1]).hexdigest()=='29bbe36650150dbedd2f466bb84abefadfb54eb0a5bddd1e6814d40c607618f8'
+            marker=folder+'C18PowerMenu.dylib.roothidepatch'
+            if arch=='arm64e':
+                assert data[marker][0].issym() and data[marker][0].linkname=='/usr/lib/DynamicPatches/AutoPatches.dylib'
+            else:assert marker not in data
             names=[folder+n for n in ('ControlCenter18.dylib','ControlCenter18Modules.dylib','C18ConnectivityFive.dylib')]
             names.append(prefix+'Library/PreferenceBundles/ControlCenter18Prefs.bundle/ControlCenter18Prefs')
             programs=[]
