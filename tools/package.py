@@ -5,6 +5,7 @@ import gzip
 import hashlib
 import io
 import lzma
+import plistlib
 import re
 import tarfile
 from pathlib import Path
@@ -73,6 +74,25 @@ def replace_content(entries, name, content):
     assert info.isfile(), name
     info.size = len(content)
     entries[name] = (info, content)
+
+
+def remove_prefs_group_localizations(entries, prefix):
+    prefs = prefix + 'Library/PreferenceBundles/ControlCenter18Prefs.bundle/'
+    changed = set()
+    for name, (info, content) in list(entries.items()):
+        if not (name.startswith(prefs) and name.endswith('.lproj/Localizable.strings') and content):
+            continue
+        strings = plistlib.loads(content)
+        assert isinstance(strings, dict) and all(k in strings for k in ('REPOSITORY', 'DEVELOPERS'))
+        before = dict(strings)
+        for key in ('REPOSITORY', 'DEVELOPERS'):
+            del strings[key]
+        assert all(strings[k] == value for k, value in before.items() if k not in ('REPOSITORY', 'DEVELOPERS'))
+        fmt = plistlib.FMT_BINARY if content.startswith(b'bplist00') else plistlib.FMT_XML
+        replace_content(entries, name, plistlib.dumps(strings, fmt=fmt, sort_keys=False))
+        changed.add(name)
+    assert len(changed) == 4, 'Unexpected settings language resource list'
+    return changed
 
 
 def serialize(entries, compressed=False):
@@ -150,8 +170,9 @@ def main():
         assert hashlib.sha256(signed_prefs).hexdigest() == record['signed_sha256']
         assert record['macos_codesign_strict_all_architectures'] is True
         replace_content(data, prefs, signed_prefs)
+        cleaned_strings = remove_prefs_group_localizations(data, prefix)
         assert data.keys() == original.keys() - removed - slim_removed
-        assert all(data[name] == original[name] for name in data if name not in (target, prefs)), "Overlay escaped reviewed scope"
+        assert all(data[name] == original[name] for name in data if name not in ({target, prefs} | cleaned_strings)), "Overlay escaped reviewed scope"
         # These are the original two image families, not substitute artwork.
         for filename in ('icon.png', 'icon@2x.png', 'icon@3x.png',
                          'header-icon.png', 'header-icon@2x.png', 'header-icon@3x.png'):

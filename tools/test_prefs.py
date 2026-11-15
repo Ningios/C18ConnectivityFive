@@ -3,7 +3,7 @@
 import hashlib
 import struct
 from pathlib import Path
-from package import BASELINES, ROOT, archive, deb_members, slim_remove
+from package import BASELINES, ROOT, archive, deb_members, slim_remove, remove_prefs_group_localizations
 from prefs_cleanup import patch, sections, slices
 
 
@@ -13,6 +13,10 @@ def main():
         assert hashlib.sha256(blob).hexdigest() == digest
         members = deb_members(blob)
         data = archive(next(v for k, v in members.items() if k.startswith('data.tar')))
+        cleaned_strings = remove_prefs_group_localizations(data, prefix)
+        assert len(cleaned_strings) == 4
+        for n in cleaned_strings:
+            assert b'REPOSITORY' not in data[n][1] and b'DEVELOPERS' not in data[n][1]
         prefs_path = prefix + 'Library/PreferenceBundles/ControlCenter18Prefs.bundle/'
         before = data[prefs_path + 'ControlCenter18Prefs'][1]
         after, changes = patch(before, arch)

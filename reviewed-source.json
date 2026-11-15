@@ -51,9 +51,9 @@
     "Vendor/baseline-arm64.deb": "5f2f16b17281d0d3cbf9eb2bd096a7021e176261023c21d9d8f892f9a3141cfb",
     "Vendor/baseline-arm64e.deb": "483130e2bc6ee885845bb66b0b9e183aa66f4f54b6bb1a950c9935f0e473a7f5",
     "tools/check_source.py": "bd439ee302214d0c46da93ae0acc774f76a509d8ab1bc2b553cc41deed0dfd0d",
-    "tools/package.py": "d989635fc267e4e1a44be8cb3e765fc7fcdcb01957f21b9be6fad0d1e47b9472",
+    "tools/package.py": "9cdd008ccacdbd7448272be2336fc6919af0c78e260246996f315a4448bc90b6",
     "tools/prefs_cleanup.py": "8b765e83d4cedbf3223ae99eb7a3542ae57eaf90fe37829a588a918fb5cd6198",
     "tools/prepare_prefs.py": "90fb1f1ed765c7b1a0f106da1b396654dec3ca668925427b71a5c0fea3550466",
-    "tools/test_prefs.py": "23e5e25df05f80d35e1119237ff27eb80ae0a75993f8d48bb32f78054876a1b1"
+    "tools/test_prefs.py": "e8ac2e281ac9b1d4e39bcd4a6475e046d1ca51e8457b38356b700cb6b31509bf"
   }
 }
